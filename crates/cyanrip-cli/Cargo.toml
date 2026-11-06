@@ -1,0 +1,19 @@
+[package]
+name = "cyanrip-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "cyanrip-frontend 的无头入口（过渡期与 ripcd 并存）"
+
+[[bin]]
+name = "cyanrip-cli"
+path = "src/main.rs"
+
+[dependencies]
+cyanrip-core = { path = "../cyanrip-core" }
+anyhow.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+regex.workspace = true
+async-channel.workspace = true

@@ -1,0 +1,1002 @@
+cyanrip 0.9.4-rc3 (648b1dd)
+Drive used:     PIONEER  DVD-RW  DVR-106D (revision 1.00)
+System device:  /dev/sr0
+Device model:   PIONEER  DVD-RW  DVR-106D 1.00 SCSI CD-ROM
+Offset:         +48 samples
+Overread:       +1 frame
+Overread mode:  fill with silence in lead-in/lead-out
+Speed:          default
+C2 errors:      unsupported by drive
+Paranoia level: max
+Frame retries:  10
+HDCD decoding:  disabled
+Album Art:      none
+Outputs:        flac
+Disc tracks:    16
+Tracks to rip:  all
+DiscID:         iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+CDDB ID:        CE0AD910
+Album:          Unknown CD 2026-11-04
+Album artist:   Unknown
+AccurateRip ID: 001a4dbd-013f66ea-ce0ad910
+AccurateRip:    found
+AcoustID:       fingerprinting, no user API key to submit with
+Total time:     46:17.22
+
+Gaps:
+    None signalled
+
+Tracks:
+
+Repeating ripping (0 out of 2 matches for current checksum 07AA62BA)
+
+Repeating ripping (1 out of 2 matches for current checksum 07AA62BA)
+
+Done; (2 out of 2 matches for current checksum 07AA62BA)
+Track 1 ripped and encoded successfully!
+Summary:
+
+  Integrated loudness:
+    I:          -7.7 LUFS
+    Threshold: -17.8 LUFS
+
+  Loudness range:
+    LRA:         2.8 LU
+    Threshold: -27.8 LUFS
+    LRA low:    -9.4 LUFS
+    LRA high:   -6.6 LUFS
+
+  True peak:
+    Peak:        0.5 dBFS
+
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    02:01.65
+    Samples:     5374320
+    Frames:      9140
+    Sample peak: 0.999786
+    Pregap LSN:  none
+    Start LSN:   0
+    End LSN:     9139 (with offset: 9140)
+
+  EAC CRC32:     F8559D45 (after 3 rips)
+  Accurip:       disc found in database (max confidence: 2)
+    Accurip v1:  D587A124
+    Accurip v2:  05C886B5 (accurately ripped, confidence 2)
+
+  Metadata:
+    track:                         1
+    tracktotal:                    16
+    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    cddb:                          CE0AD910
+    media:                         CD
+    comment:                       cyanrip 0.9.4-rc3
+    title:                         Unknown track
+    album:                         Unknown CD 2026-11-04
+    album_artist:                  Unknown
+    artist:                        Unknown
+    creation_time:                 2026-11-04T23:08:45
+    REPLAYGAIN_TRACK_GAIN:         -10.28 dB
+    R128_TRACK_GAIN:               -1352
+    REPLAYGAIN_TRACK_RANGE:        2.75 dB
+    REPLAYGAIN_TRACK_PEAK:         1.063227
+    REPLAYGAIN_REFERENCE_LOUDNESS: -18.00 LUFS
+
+  File(s):
+    Unknown CD 2026-11-04 [FLAC]/01 - Unknown track.flac
+
+
+Repeating ripping (0 out of 2 matches for current checksum 0FA25BF9)
+
+Repeating ripping (1 out of 2 matches for current checksum 0FA25BF9)
+
+Done; (2 out of 2 matches for current checksum 0FA25BF9)
+Track 2 ripped and encoded successfully!
+Summary:
+
+  Integrated loudness:
+    I:         -11.5 LUFS
+    Threshold: -21.6 LUFS
+
+  Loudness range:
+    LRA:         6.2 LU
+    Threshold: -31.6 LUFS
+    LRA low:   -15.2 LUFS
+    LRA high:   -9.1 LUFS
+
+  True peak:
+    Peak:        0.1 dBFS
+
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    03:27.40
+    Samples:     9152220
+    Frames:      15565
+    Sample peak: 0.999786
+    Pregap LSN:  none
+    Start LSN:   9140
+    End LSN:     24704 (with offset: 24705)
+
+  EAC CRC32:     F05DA406 (after 3 rips)
+  Accurip:       disc found in database (max confidence: 2)
+    Accurip v1:  911A8E42
+    Accurip v2:  35CDA9F6 (accurately ripped, confidence 2)
+
+  Metadata:
+    track:                         2
+    tracktotal:                    16
+    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    cddb:                          CE0AD910
+    media:                         CD
+    comment:                       cyanrip 0.9.4-rc3
+    title:                         Unknown track
+    album:                         Unknown CD 2026-11-04
+    album_artist:                  Unknown
+    artist:                        Unknown
+    creation_time:                 2026-11-04T23:09:49
+    REPLAYGAIN_TRACK_GAIN:         -6.55 dB
+    R128_TRACK_GAIN:               -396
+    REPLAYGAIN_TRACK_RANGE:        6.17 dB
+    REPLAYGAIN_TRACK_PEAK:         1.009901
+    REPLAYGAIN_REFERENCE_LOUDNESS: -18.00 LUFS
+
+  File(s):
+    Unknown CD 2026-11-04 [FLAC]/02 - Unknown track.flac
+
+
+Repeating ripping (0 out of 2 matches for current checksum 1243A087)
+
+Repeating ripping (1 out of 2 matches for current checksum 1243A087)
+
+Done; (2 out of 2 matches for current checksum 1243A087)
+Track 3 ripped and encoded successfully!
+Summary:
+
+  Integrated loudness:
+    I:         -10.6 LUFS
+    Threshold: -20.8 LUFS
+
+  Loudness range:
+    LRA:         6.3 LU
+    Threshold: -30.8 LUFS
+    LRA low:   -14.3 LUFS
+    LRA high:   -8.0 LUFS
+
+  True peak:
+    Peak:        0.1 dBFS
+
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    02:30.00
+    Samples:     6615000
+    Frames:      11250
+    Sample peak: 0.999786
+    Pregap LSN:  none
+    Start LSN:   24705
+    End LSN:     35954 (with offset: 35955)
+
+  EAC CRC32:     EDBC5F78 (after 3 rips)
+  Accurip:       disc found in database (max confidence: 2)
+    Accurip v1:  50EF9ABA
+    Accurip v2:  FD9DBCD2 (accurately ripped, confidence 2)
+
+  Metadata:
+    track:                         3
+    tracktotal:                    16
+    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    cddb:                          CE0AD910
+    media:                         CD
+    comment:                       cyanrip 0.9.4-rc3
+    title:                         Unknown track
+    album:                         Unknown CD 2026-11-04
+    album_artist:                  Unknown
+    artist:                        Unknown
+    creation_time:                 2026-11-04T23:11:42
+    REPLAYGAIN_TRACK_GAIN:         -7.44 dB
+    R128_TRACK_GAIN:               -625
+    REPLAYGAIN_TRACK_RANGE:        6.33 dB
+    REPLAYGAIN_TRACK_PEAK:         1.013062
+    REPLAYGAIN_REFERENCE_LOUDNESS: -18.00 LUFS
+
+  File(s):
+    Unknown CD 2026-11-04 [FLAC]/03 - Unknown track.flac
+
+
+Repeating ripping (0 out of 2 matches for current checksum 1762DF4A)
+
+Repeating ripping (1 out of 2 matches for current checksum 1762DF4A)
+
+Done; (2 out of 2 matches for current checksum 1762DF4A)
+Track 4 ripped and encoded successfully!
+Summary:
+
+  Integrated loudness:
+    I:          -7.0 LUFS
+    Threshold: -17.1 LUFS
+
+  Loudness range:
+    LRA:         2.8 LU
+    Threshold: -27.1 LUFS
+    LRA low:    -8.5 LUFS
+    LRA high:   -5.8 LUFS
+
+  True peak:
+    Peak:        0.2 dBFS
+
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    01:54.25
+    Samples:     5042100
+    Frames:      8575
+    Sample peak: 0.999786
+    Pregap LSN:  none
+    Start LSN:   35955
+    End LSN:     44529 (with offset: 44530)
+
+  EAC CRC32:     E89D20B5 (after 3 rips)
+  Accurip:       disc found in database (max confidence: 2)
+    Accurip v1:  BBD31364
+    Accurip v2:  530C6AAB (accurately ripped, confidence 2)
+
+  Metadata:
+    track:                         4
+    tracktotal:                    16
+    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    cddb:                          CE0AD910
+    media:                         CD
+    comment:                       cyanrip 0.9.4-rc3
+    title:                         Unknown track
+    album:                         Unknown CD 2026-11-04
+    album_artist:                  Unknown
+    artist:                        Unknown
+    creation_time:                 2026-11-04T23:12:56
+    REPLAYGAIN_TRACK_GAIN:         -11.03 dB
+    R128_TRACK_GAIN:               -1543
+    REPLAYGAIN_TRACK_RANGE:        2.76 dB
+    REPLAYGAIN_TRACK_PEAK:         1.019943
+    REPLAYGAIN_REFERENCE_LOUDNESS: -18.00 LUFS
+
+  File(s):
+    Unknown CD 2026-11-04 [FLAC]/04 - Unknown track.flac
+
+
+Repeating ripping (0 out of 2 matches for current checksum 6DC1F812)
+
+Repeating ripping (1 out of 2 matches for current checksum 6DC1F812)
+
+Done; (2 out of 2 matches for current checksum 6DC1F812)
+Track 5 ripped and encoded successfully!
+Summary:
+
+  Integrated loudness:
+    I:         -10.0 LUFS
+    Threshold: -20.1 LUFS
+
+  Loudness range:
+    LRA:         2.9 LU
+    Threshold: -30.1 LUFS
+    LRA low:   -11.5 LUFS
+    LRA high:   -8.7 LUFS
+
+  True peak:
+    Peak:        1.9 dBFS
+
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    03:13.60
+    Samples:     8546580
+    Frames:      14535
+    Sample peak: 0.999786
+    Pregap LSN:  none
+    Start LSN:   44530
+    End LSN:     59064 (with offset: 59065)
+
+  EAC CRC32:     923E07ED (after 3 rips)
+  Accurip:       disc found in database (max confidence: 2)
+    Accurip v1:  047882C6
+    Accurip v2:  AFFC4FEE (accurately ripped, confidence 2)
+
+  Metadata:
+    track:                         5
+    tracktotal:                    16
+    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    cddb:                          CE0AD910
+    media:                         CD
+    comment:                       cyanrip 0.9.4-rc3
+    title:                         Unknown track
+    album:                         Unknown CD 2026-11-04
+    album_artist:                  Unknown
+    artist:                        Unknown
+    creation_time:                 2026-11-04T23:13:53
+    REPLAYGAIN_TRACK_GAIN:         -7.97 dB
+    R128_TRACK_GAIN:               -759
+    REPLAYGAIN_TRACK_RANGE:        2.86 dB
+    REPLAYGAIN_TRACK_PEAK:         1.239895
+    REPLAYGAIN_REFERENCE_LOUDNESS: -18.00 LUFS
+
+  File(s):
+    Unknown CD 2026-11-04 [FLAC]/05 - Unknown track.flac
+
+
+Repeating ripping (0 out of 2 matches for current checksum 663BBB2A)
+
+Repeating ripping (1 out of 2 matches for current checksum 663BBB2A)
+
+Done; (2 out of 2 matches for current checksum 663BBB2A)
+Track 6 ripped and encoded successfully!
+Summary:
+
+  Integrated loudness:
+    I:          -8.9 LUFS
+    Threshold: -19.0 LUFS
+
+  Loudness range:
+    LRA:         4.6 LU
+    Threshold: -29.0 LUFS
+    LRA low:   -11.7 LUFS
+    LRA high:   -7.1 LUFS
+
+  True peak:
+    Peak:        0.5 dBFS
+
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    02:18.22
+    Samples:     6098736
+    Frames:      10372
+    Sample peak: 0.999786
+    Pregap LSN:  none
+    Start LSN:   59065
+    End LSN:     69436 (with offset: 69437)
+
+  EAC CRC32:     99C444D5 (after 3 rips)
+  Accurip:       disc found in database (max confidence: 2)
+    Accurip v1:  5ED97AA1
+    Accurip v2:  36BEACD2 (accurately ripped, confidence 2)
+
+  Metadata:
+    track:                         6
+    tracktotal:                    16
+    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    cddb:                          CE0AD910
+    media:                         CD
+    comment:                       cyanrip 0.9.4-rc3
+    title:                         Unknown track
+    album:                         Unknown CD 2026-11-04
+    album_artist:                  Unknown
+    artist:                        Unknown
+    creation_time:                 2026-11-04T23:15:25
+    REPLAYGAIN_TRACK_GAIN:         -9.14 dB
+    R128_TRACK_GAIN:               -1059
+    REPLAYGAIN_TRACK_RANGE:        4.60 dB
+    REPLAYGAIN_TRACK_PEAK:         1.057163
+    REPLAYGAIN_REFERENCE_LOUDNESS: -18.00 LUFS
+
+  File(s):
+    Unknown CD 2026-11-04 [FLAC]/06 - Unknown track.flac
+
+
+Repeating ripping (0 out of 2 matches for current checksum 51E26572)
+
+Repeating ripping (1 out of 2 matches for current checksum 51E26572)
+
+Done; (2 out of 2 matches for current checksum 51E26572)
+Track 7 ripped and encoded successfully!
+Summary:
+
+  Integrated loudness:
+    I:          -8.7 LUFS
+    Threshold: -18.8 LUFS
+
+  Loudness range:
+    LRA:         6.7 LU
+    Threshold: -28.8 LUFS
+    LRA low:   -12.9 LUFS
+    LRA high:   -6.2 LUFS
+
+  True peak:
+    Peak:        0.6 dBFS
+
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    03:43.45
+    Samples:     9860760
+    Frames:      16770
+    Sample peak: 0.999786
+    Pregap LSN:  none
+    Start LSN:   69437
+    End LSN:     86206 (with offset: 86207)
+
+  EAC CRC32:     AE1D9A8D (after 3 rips)
+  Accurip:       disc found in database (max confidence: 2)
+    Accurip v1:  D15C260E
+    Accurip v2:  AB3F7C27 (accurately ripped, confidence 2)
+
+  Metadata:
+    track:                         7
+    tracktotal:                    16
+    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    cddb:                          CE0AD910
+    media:                         CD
+    comment:                       cyanrip 0.9.4-rc3
+    title:                         Unknown track
+    album:                         Unknown CD 2026-11-04
+    album_artist:                  Unknown
+    artist:                        Unknown
+    creation_time:                 2026-11-04T23:16:26
+    REPLAYGAIN_TRACK_GAIN:         -9.32 dB
+    R128_TRACK_GAIN:               -1107
+    REPLAYGAIN_TRACK_RANGE:        6.69 dB
+    REPLAYGAIN_TRACK_PEAK:         1.072092
+    REPLAYGAIN_REFERENCE_LOUDNESS: -18.00 LUFS
+
+  File(s):
+    Unknown CD 2026-11-04 [FLAC]/07 - Unknown track.flac
+
+
+Repeating ripping (0 out of 2 matches for current checksum 9328F94B)
+
+Repeating ripping (1 out of 2 matches for current checksum 9328F94B)
+
+Done; (2 out of 2 matches for current checksum 9328F94B)
+Track 8 ripped and encoded successfully!
+Summary:
+
+  Integrated loudness:
+    I:          -8.0 LUFS
+    Threshold: -18.2 LUFS
+
+  Loudness range:
+    LRA:        11.0 LU
+    Threshold: -28.1 LUFS
+    LRA low:   -15.4 LUFS
+    LRA high:   -4.4 LUFS
+
+  True peak:
+    Peak:        1.1 dBFS
+
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    03:20.70
+    Samples:     8861160
+    Frames:      15070
+    Sample peak: 0.999786
+    Pregap LSN:  none
+    Start LSN:   86207
+    End LSN:     101276 (with offset: 101277)
+
+  EAC CRC32:     6CD706B4 (after 3 rips)
+  Accurip:       disc found in database (max confidence: 2)
+    Accurip v1:  B0A3CFF2
+    Accurip v2:  F1837283 (accurately ripped, confidence 2)
+
+  Metadata:
+    track:                         8
+    tracktotal:                    16
+    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    cddb:                          CE0AD910
+    media:                         CD
+    comment:                       cyanrip 0.9.4-rc3
+    title:                         Unknown track
+    album:                         Unknown CD 2026-11-04
+    album_artist:                  Unknown
+    artist:                        Unknown
+    creation_time:                 2026-11-04T23:18:03
+    REPLAYGAIN_TRACK_GAIN:         -9.99 dB
+    R128_TRACK_GAIN:               -1277
+    REPLAYGAIN_TRACK_RANGE:        11.01 dB
+    REPLAYGAIN_TRACK_PEAK:         1.131891
+    REPLAYGAIN_REFERENCE_LOUDNESS: -18.00 LUFS
+
+  File(s):
+    Unknown CD 2026-11-04 [FLAC]/08 - Unknown track.flac
+
+
+Repeating ripping (0 out of 2 matches for current checksum 65CFC801)
+
+Repeating ripping (1 out of 2 matches for current checksum 65CFC801)
+
+Done; (2 out of 2 matches for current checksum 65CFC801)
+Track 9 ripped and encoded successfully!
+Summary:
+
+  Integrated loudness:
+    I:          -9.6 LUFS
+    Threshold: -19.8 LUFS
+
+  Loudness range:
+    LRA:         2.1 LU
+    Threshold: -29.8 LUFS
+    LRA low:   -11.0 LUFS
+    LRA high:   -8.8 LUFS
+
+  True peak:
+    Peak:        0.1 dBFS
+
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    02:37.33
+    Samples:     6943104
+    Frames:      11808
+    Sample peak: 0.999786
+    Pregap LSN:  none
+    Start LSN:   101277
+    End LSN:     113084 (with offset: 113085)
+
+  EAC CRC32:     9A3037FE (after 3 rips)
+  Accurip:       disc found in database (max confidence: 2)
+    Accurip v1:  D09C9F23
+    Accurip v2:  81B90172 (accurately ripped, confidence 2)
+
+  Metadata:
+    track:                         9
+    tracktotal:                    16
+    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    cddb:                          CE0AD910
+    media:                         CD
+    comment:                       cyanrip 0.9.4-rc3
+    title:                         Unknown track
+    album:                         Unknown CD 2026-11-04
+    album_artist:                  Unknown
+    artist:                        Unknown
+    creation_time:                 2026-11-04T23:19:27
+    REPLAYGAIN_TRACK_GAIN:         -8.41 dB
+    R128_TRACK_GAIN:               -872
+    REPLAYGAIN_TRACK_RANGE:        2.13 dB
+    REPLAYGAIN_TRACK_PEAK:         1.016300
+    REPLAYGAIN_REFERENCE_LOUDNESS: -18.00 LUFS
+
+  File(s):
+    Unknown CD 2026-11-04 [FLAC]/09 - Unknown track.flac
+
+
+Repeating ripping (0 out of 2 matches for current checksum DA99F265)
+
+Repeating ripping (1 out of 2 matches for current checksum DA99F265)
+
+Done; (2 out of 2 matches for current checksum DA99F265)
+Track 10 ripped and encoded successfully!
+Summary:
+
+  Integrated loudness:
+    I:         -10.1 LUFS
+    Threshold: -20.3 LUFS
+
+  Loudness range:
+    LRA:         5.8 LU
+    Threshold: -30.3 LUFS
+    LRA low:   -13.4 LUFS
+    LRA high:   -7.6 LUFS
+
+  True peak:
+    Peak:        0.1 dBFS
+
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    03:45.25
+    Samples:     9937200
+    Frames:      16900
+    Sample peak: 0.999786
+    Pregap LSN:  none
+    Start LSN:   113085
+    End LSN:     129984 (with offset: 129985)
+
+  EAC CRC32:     25660D9A (after 3 rips)
+  Accurip:       disc found in database (max confidence: 1)
+    Accurip v1:  297C2D4D
+    Accurip v2:  DCD090F2 (accurately ripped, confidence 1)
+
+  Metadata:
+    track:                         10
+    tracktotal:                    16
+    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    cddb:                          CE0AD910
+    media:                         CD
+    comment:                       cyanrip 0.9.4-rc3
+    title:                         Unknown track
+    album:                         Unknown CD 2026-11-04
+    album_artist:                  Unknown
+    artist:                        Unknown
+    creation_time:                 2026-11-04T23:20:31
+    REPLAYGAIN_TRACK_GAIN:         -7.86 dB
+    R128_TRACK_GAIN:               -732
+    REPLAYGAIN_TRACK_RANGE:        5.84 dB
+    REPLAYGAIN_TRACK_PEAK:         1.013002
+    REPLAYGAIN_REFERENCE_LOUDNESS: -18.00 LUFS
+
+  File(s):
+    Unknown CD 2026-11-04 [FLAC]/10 - Unknown track.flac
+
+
+Repeating ripping (0 out of 2 matches for current checksum 8447FD39)
+
+Repeating ripping (1 out of 2 matches for current checksum 8447FD39)
+
+Done; (2 out of 2 matches for current checksum 8447FD39)
+Track 11 ripped and encoded successfully!
+Summary:
+
+  Integrated loudness:
+    I:          -8.6 LUFS
+    Threshold: -18.7 LUFS
+
+  Loudness range:
+    LRA:         6.3 LU
+    Threshold: -28.7 LUFS
+    LRA low:   -12.5 LUFS
+    LRA high:   -6.2 LUFS
+
+  True peak:
+    Peak:        0.7 dBFS
+
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    02:25.20
+    Samples:     6406260
+    Frames:      10895
+    Sample peak: 0.999786
+    Pregap LSN:  none
+    Start LSN:   129985
+    End LSN:     140879 (with offset: 140880)
+
+  EAC CRC32:     7BB802C6 (after 3 rips)
+  Accurip:       disc found in database (max confidence: 2)
+    Accurip v1:  DBFA0AB5
+    Accurip v2:  646AFD71 (accurately ripped, confidence 2)
+
+  Metadata:
+    track:                         11
+    tracktotal:                    16
+    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    cddb:                          CE0AD910
+    media:                         CD
+    comment:                       cyanrip 0.9.4-rc3
+    title:                         Unknown track
+    album:                         Unknown CD 2026-11-04
+    album_artist:                  Unknown
+    artist:                        Unknown
+    creation_time:                 2026-11-04T23:22:03
+    REPLAYGAIN_TRACK_GAIN:         -9.35 dB
+    R128_TRACK_GAIN:               -1114
+    REPLAYGAIN_TRACK_RANGE:        6.35 dB
+    REPLAYGAIN_TRACK_PEAK:         1.081819
+    REPLAYGAIN_REFERENCE_LOUDNESS: -18.00 LUFS
+
+  File(s):
+    Unknown CD 2026-11-04 [FLAC]/11 - Unknown track.flac
+
+
+Repeating ripping (0 out of 2 matches for current checksum 45865E8D)
+
+Repeating ripping (1 out of 2 matches for current checksum 45865E8D)
+
+Done; (2 out of 2 matches for current checksum 45865E8D)
+Track 12 ripped and encoded successfully!
+Summary:
+
+  Integrated loudness:
+    I:         -10.6 LUFS
+    Threshold: -20.9 LUFS
+
+  Loudness range:
+    LRA:         6.5 LU
+    Threshold: -30.9 LUFS
+    LRA low:   -14.7 LUFS
+    LRA high:   -8.2 LUFS
+
+  True peak:
+    Peak:        0.4 dBFS
+
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    03:14.30
+    Samples:     8573040
+    Frames:      14580
+    Sample peak: 0.999786
+    Pregap LSN:  none
+    Start LSN:   140880
+    End LSN:     155459 (with offset: 155460)
+
+  EAC CRC32:     BA79A172 (after 3 rips)
+  Accurip:       disc found in database (max confidence: 2)
+    Accurip v1:  32F1CC5A
+    Accurip v2:  5B5AC6EB (accurately ripped, confidence 2)
+
+  Metadata:
+    track:                         12
+    tracktotal:                    16
+    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    cddb:                          CE0AD910
+    media:                         CD
+    comment:                       cyanrip 0.9.4-rc3
+    title:                         Unknown track
+    album:                         Unknown CD 2026-11-04
+    album_artist:                  Unknown
+    artist:                        Unknown
+    creation_time:                 2026-11-04T23:23:02
+    REPLAYGAIN_TRACK_GAIN:         -7.38 dB
+    R128_TRACK_GAIN:               -608
+    REPLAYGAIN_TRACK_RANGE:        6.53 dB
+    REPLAYGAIN_TRACK_PEAK:         1.041259
+    REPLAYGAIN_REFERENCE_LOUDNESS: -18.00 LUFS
+
+  File(s):
+    Unknown CD 2026-11-04 [FLAC]/12 - Unknown track.flac
+
+
+Repeating ripping (0 out of 2 matches for current checksum 7657731A)
+
+Repeating ripping (1 out of 2 matches for current checksum 7657731A)
+
+Done; (2 out of 2 matches for current checksum 7657731A)
+Track 13 ripped and encoded successfully!
+Summary:
+
+  Integrated loudness:
+    I:          -8.6 LUFS
+    Threshold: -18.7 LUFS
+
+  Loudness range:
+    LRA:         3.1 LU
+    Threshold: -28.7 LUFS
+    LRA low:   -10.2 LUFS
+    LRA high:   -7.1 LUFS
+
+  True peak:
+    Peak:        0.7 dBFS
+
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    02:20.10
+    Samples:     6179880
+    Frames:      10510
+    Sample peak: 0.999786
+    Pregap LSN:  none
+    Start LSN:   155460
+    End LSN:     165969 (with offset: 165970)
+
+  EAC CRC32:     89A88CE5 (after 3 rips)
+  Accurip:       disc found in database (max confidence: 2)
+    Accurip v1:  6EE84573
+    Accurip v2:  FF722606 (accurately ripped, confidence 2)
+
+  Metadata:
+    track:                         13
+    tracktotal:                    16
+    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    cddb:                          CE0AD910
+    media:                         CD
+    comment:                       cyanrip 0.9.4-rc3
+    title:                         Unknown track
+    album:                         Unknown CD 2026-11-04
+    album_artist:                  Unknown
+    artist:                        Unknown
+    creation_time:                 2026-11-04T23:24:18
+    REPLAYGAIN_TRACK_GAIN:         -9.39 dB
+    R128_TRACK_GAIN:               -1125
+    REPLAYGAIN_TRACK_RANGE:        3.12 dB
+    REPLAYGAIN_TRACK_PEAK:         1.081185
+    REPLAYGAIN_REFERENCE_LOUDNESS: -18.00 LUFS
+
+  File(s):
+    Unknown CD 2026-11-04 [FLAC]/13 - Unknown track.flac
+
+
+Repeating ripping (0 out of 2 matches for current checksum 15789F49)
+
+Repeating ripping (1 out of 2 matches for current checksum 15789F49)
+
+Done; (2 out of 2 matches for current checksum 15789F49)
+Track 14 ripped and encoded successfully!
+Summary:
+
+  Integrated loudness:
+    I:         -13.0 LUFS
+    Threshold: -23.2 LUFS
+
+  Loudness range:
+    LRA:         8.6 LU
+    Threshold: -33.1 LUFS
+    LRA low:   -18.4 LUFS
+    LRA high:   -9.8 LUFS
+
+  True peak:
+    Peak:        0.1 dBFS
+
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    03:40.22
+    Samples:     9714936
+    Frames:      16522
+    Sample peak: 0.999786
+    Pregap LSN:  none
+    Start LSN:   165970
+    End LSN:     182491 (with offset: 182492)
+
+  EAC CRC32:     EA8760B6 (after 3 rips)
+  Accurip:       disc found in database (max confidence: 2)
+    Accurip v1:  E7E5826B
+    Accurip v2:  169124AE (accurately ripped, confidence 2)
+
+  Metadata:
+    track:                         14
+    tracktotal:                    16
+    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    cddb:                          CE0AD910
+    media:                         CD
+    comment:                       cyanrip 0.9.4-rc3
+    title:                         Unknown track
+    album:                         Unknown CD 2026-11-04
+    album_artist:                  Unknown
+    artist:                        Unknown
+    creation_time:                 2026-11-04T23:25:10
+    REPLAYGAIN_TRACK_GAIN:         -5.03 dB
+    R128_TRACK_GAIN:               -7
+    REPLAYGAIN_TRACK_RANGE:        8.60 dB
+    REPLAYGAIN_TRACK_PEAK:         1.007151
+    REPLAYGAIN_REFERENCE_LOUDNESS: -18.00 LUFS
+
+  File(s):
+    Unknown CD 2026-11-04 [FLAC]/14 - Unknown track.flac
+
+
+Repeating ripping (0 out of 2 matches for current checksum 5245D466)
+
+Repeating ripping (1 out of 2 matches for current checksum 5245D466)
+
+Done; (2 out of 2 matches for current checksum 5245D466)
+Track 15 ripped and encoded successfully!
+Summary:
+
+  Integrated loudness:
+    I:          -8.0 LUFS
+    Threshold: -18.0 LUFS
+
+  Loudness range:
+    LRA:         3.7 LU
+    Threshold: -28.1 LUFS
+    LRA low:    -9.6 LUFS
+    LRA high:   -6.0 LUFS
+
+  True peak:
+    Peak:        0.8 dBFS
+
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    03:18.10
+    Samples:     8737680
+    Frames:      14860
+    Sample peak: 0.999786
+    Pregap LSN:  none
+    Start LSN:   182492
+    End LSN:     197351 (with offset: 197352)
+
+  EAC CRC32:     ADBA2B99 (after 3 rips)
+  Accurip:       disc found in database (max confidence: 1)
+    Accurip v1:  C0485E80
+    Accurip v2:  87C083D6 (accurately ripped, confidence 1)
+
+  Metadata:
+    track:                         15
+    tracktotal:                    16
+    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    cddb:                          CE0AD910
+    media:                         CD
+    comment:                       cyanrip 0.9.4-rc3
+    title:                         Unknown track
+    album:                         Unknown CD 2026-11-04
+    album_artist:                  Unknown
+    artist:                        Unknown
+    creation_time:                 2026-11-04T23:26:32
+    REPLAYGAIN_TRACK_GAIN:         -9.99 dB
+    R128_TRACK_GAIN:               -1277
+    REPLAYGAIN_TRACK_RANGE:        3.66 dB
+    REPLAYGAIN_TRACK_PEAK:         1.100191
+    REPLAYGAIN_REFERENCE_LOUDNESS: -18.00 LUFS
+
+  File(s):
+    Unknown CD 2026-11-04 [FLAC]/15 - Unknown track.flac
+
+
+Repeating ripping (0 out of 2 matches for current checksum C9B4C3AF)
+
+Repeating ripping (1 out of 2 matches for current checksum C9B4C3AF)
+
+Done; (2 out of 2 matches for current checksum C9B4C3AF)
+Track 16 ripped and encoded successfully!
+Summary:
+
+  Integrated loudness:
+    I:          -9.3 LUFS
+    Threshold: -20.2 LUFS
+
+  Loudness range:
+    LRA:        14.8 LU
+    Threshold: -30.1 LUFS
+    LRA low:   -22.2 LUFS
+    LRA high:   -7.3 LUFS
+
+  True peak:
+    Peak:        0.0 dBFS
+
+  Preemphasis:   none detected
+
+  Properties:
+    Duration:    02:25.70
+    Samples:     6435660
+    Frames:      10945
+    Sample peak: 0.999969
+    Pregap LSN:  none
+    Start LSN:   197352
+    End LSN:     208296
+    Appended:    1 frames of silence
+
+  EAC CRC32:     364B3C50 (after 3 rips)
+  Accurip:       disc found in database (max confidence: 1)
+    Accurip v1:  E4F505C0 (not found, either a new pressing, or bad rip)
+    Accurip v2:  2CAF18F0 (not found, either a new pressing, or bad rip)
+    Accurip 450: 4BA297B5 (not found)
+
+  Metadata:
+    track:                         16
+    tracktotal:                    16
+    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    cddb:                          CE0AD910
+    media:                         CD
+    comment:                       cyanrip 0.9.4-rc3
+    title:                         Unknown track
+    album:                         Unknown CD 2026-11-04
+    album_artist:                  Unknown
+    artist:                        Unknown
+    creation_time:                 2026-11-04T23:27:47
+    REPLAYGAIN_TRACK_GAIN:         -8.67 dB
+    R128_TRACK_GAIN:               -938
+    REPLAYGAIN_TRACK_RANGE:        14.85 dB
+    REPLAYGAIN_TRACK_PEAK:         1.004574
+    REPLAYGAIN_REFERENCE_LOUDNESS: -18.00 LUFS
+
+  File(s):
+    Unknown CD 2026-11-04 [FLAC]/16 - Unknown track.flac
+
+Album Loudness Summary:
+
+  Integrated loudness:
+    I:          -9.3 LUFS
+    Threshold: -19.5 LUFS
+
+  Loudness range:
+    LRA:         8.3 LU
+    Threshold: -29.6 LUFS
+    LRA low:   -14.7 LUFS
+    LRA high:   -6.4 LUFS
+
+  True peak:
+    Peak:        1.9 dBFS
+
+AcoustID: 16 fingerprints saved to tags, not submitted: MusicBrainz disabled
+Tracks ripped accurately: 15/16
+
+Paranoia status counts:
+  READ:          50859
+  VERIFY:        7954
+  FIXUP_ATOM:    2
+  OVERLAP:       1224
+
+Ripping errors: 0
+Ripping finished at 2026-11-04T23:28:40
+Log FUN512: YvSEjXSCz74n6aXMQgodjTt21PZZeGcNd5CD9ws6LcplhDpHpmQOWKLXDBxxipgr95E6bAohN87rweDtO5on2Q

@@ -1,0 +1,29 @@
+[workspace]
+resolver = "2"
+members = ["crates/cyanrip-core", "crates/cyanrip-cli"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+license = "MIT"
+
+[workspace.dependencies]
+anyhow = "1"
+thiserror = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+regex = "1"
+libc = "0.2"
+tokio = { version = "1", features = [
+    "process", "io-util", "sync", "time", "rt-multi-thread", "macros", "fs", "signal",
+] }
+async-channel = "2"
+tracing = "0.1"
+chrono = { version = "0.4", features = ["serde"] }
+directories = "5"
+
+[profile.release]
+lto = "thin"
+strip = true
