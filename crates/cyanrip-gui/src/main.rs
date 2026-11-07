@@ -51,11 +51,16 @@ fn main() -> glib::ExitCode {
             ui::start_rip(&ui, &state);
             let st2 = state.clone();
             let app2 = app.clone();
+            let ui2 = ui.clone();
             glib::timeout_add_local(std::time::Duration::from_millis(500), move || {
                 match st2.borrow().phase {
                     state::Phase::Done => {
                         let r = st2.borrow().report.clone().unwrap_or_default();
-                        println!("AUTORIP_OK {}/{}", r.tracks_accurate, r.tracks_ripped);
+                        let widgets = ui2.result_body.observe_children().n_items();
+                        println!(
+                            "AUTORIP_OK {}/{} RESULT_WIDGETS={widgets}",
+                            r.tracks_accurate, r.tracks_ripped
+                        );
                         app2.quit();
                         glib::ControlFlow::Break
                     }

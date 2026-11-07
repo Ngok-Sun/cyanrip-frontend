@@ -9,7 +9,7 @@ use adw::prelude::*;
 use cyanrip_core::config::Settings;
 use cyanrip_core::disc;
 use cyanrip_core::event::Event;
-use cyanrip_core::model::{fmt_duration, ArState, DiscInfo, TrackResult};
+use cyanrip_core::model::{fmt_duration, ArState, DiscInfo, RipReport};
 use cyanrip_core::rip::{self, RipOptions};
 use gtk::{glib, Orientation};
 use libadwaita as adw;
@@ -43,7 +43,7 @@ pub struct Ui {
     pub cancel_btn: gtk::Button,
     // 结果页
     pub result_summary: gtk::Label,
-    pub result_list: gtk::ListBox,
+    pub result_body: gtk::Box,
     pub open_output_btn: gtk::Button,
     pub copy_log_btn: gtk::Button,
     // 设置页
@@ -182,12 +182,14 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
     result_summary.set_xalign(0.0);
     result_summary.add_css_class("title-4");
 
-    let result_list = gtk::ListBox::new();
-    result_list.set_selection_mode(gtk::SelectionMode::None);
-    result_list.add_css_class("boxed-list");
+    let result_body = gtk::Box::new(Orientation::Vertical, 14);
+    result_body.set_margin_top(6);
+    result_body.set_margin_bottom(6);
+    result_body.set_margin_start(6);
+    result_body.set_margin_end(6);
     let result_scroll = gtk::ScrolledWindow::builder()
         .vexpand(true)
-        .child(&result_list)
+        .child(&result_body)
         .build();
 
     let open_output_btn = gtk::Button::with_label(&tr("打开输出目录"));
@@ -258,7 +260,7 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
         log_view,
         cancel_btn,
         result_summary,
-        result_list,
+        result_body,
         open_output_btn,
         copy_log_btn,
         paranoia_spin,
@@ -1158,47 +1160,194 @@ fn handle_event(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>, ev: Event) {
     }
 }
 
-fn fill_result(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>, report: &cyanrip_core::RipReport) {
-    while let Some(child) = ui.result_list.first_child() {
-        ui.result_list.remove(&child);
+fn fill_result(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>, report: &RipReport) {
+    while let Some(child) = ui.result_body.first_child() {
+        ui.result_body.remove(&child);
     }
+
+    // 标题：一眼看到结论
+    let verdict = if report.all_accurate() {
+        tr("全部精确命中，与 AccurateRip 数据库一致")
+    } else if report.errors > 0 {
+        format!("{} {}", tr("存在抓轨错误"), report.errors)
+    } else if report.tracks_accurate + 1 >= report.tracks_ripped {
+        tr("基本命中，个别轨未入库或校验和不一致")
+    } else {
+        tr("部分轨未通过 AccurateRip 校验")
+    };
     ui.result_summary.set_text(&format!(
-        "{} {}/{} · {} {} · offset {:?}",
-        tr("精确命中"),
+        "{}/{} {} · {verdict}",
         report.tracks_accurate,
         report.tracks_ripped,
-        tr("错误"),
-        report.errors,
-        report.offset
+        tr("轨精确命中")
     ));
-    for t in &report.tracks {
-        let row = adw::ActionRow::builder()
-            .title(format!("{:02}", t.number))
-            .subtitle(describe_track(t))
-            .build();
-        ui.result_list.append(&row);
-    }
-    let _ = state;
-}
 
-fn describe_track(t: &TrackResult) -> String {
-    let crc = t
-        .crc32
-        .map(|c| format!("EAC CRC32 {c:08X}"))
-        .unwrap_or_else(|| "—".into());
-    let ar = match t.ar_state {
-        ArState::Accurate => format!(
-            "AR v2 {} (confidence {})",
+    // 概览
+    let (vendor, model, fw, disc_tracks, disc_len) = {
+        let st = state.borrow();
+        match &st.disc {
+            Some(d) => (
+                d.vendor.clone(),
+                d.model.clone(),
+                d.firmware.clone().unwrap_or_default(),
+                d.audio_track_count(),
+                fmt_duration(d.total_duration()),
+            ),
+            None => (
+                String::new(),
+                String::new(),
+                String::new(),
+                0,
+                String::new(),
+            ),
+        }
+    };
+
+    let overview = gtk::Grid::builder()
+        .row_spacing(6)
+        .column_spacing(24)
+        .build();
+    let mut r = 0;
+    let mut add_kv = |k: &str, v: String| {
+        let key = gtk::Label::new(Some(k));
+        key.set_xalign(0.0);
+        key.add_css_class("dim-label");
+        let val = gtk::Label::new(Some(&v));
+        val.set_xalign(0.0);
+        val.set_selectable(true);
+        overview.attach(&key, 0, r, 1, 1);
+        overview.attach(&val, 1, r, 1, 1);
+        r += 1;
+    };
+    add_kv(
+        &tr("设备"),
+        format!("{vendor} {model} {fw}").trim().to_string(),
+    );
+    add_kv(
+        &tr("碟片"),
+        format!("{disc_tracks} {} · {disc_len}", tr("轨")),
+    );
+    add_kv(
+        &tr("读偏移"),
+        report
+            .offset
+            .map(|o| format!("{o:+} samples"))
+            .unwrap_or_else(|| "—".into()),
+    );
+    add_kv(
+        &tr("C2 支持"),
+        match report.c2_supported {
+            Some(true) => tr("支持（仍以多遍比对为准）"),
+            Some(false) => tr("驱动不支持，依赖多遍比对"),
+            None => "—".into(),
+        },
+    );
+    add_kv(
+        &tr("Paranoia 级别"),
+        report.paranoia_level.clone().unwrap_or_else(|| "—".into()),
+    );
+    add_kv(
+        &tr("AccurateRip"),
+        match report.ar_id.as_deref() {
+            Some(id) => format!(
+                "{} · {id}",
+                if report.ar_found == Some(true) {
+                    tr("数据库中有这张碟")
+                } else {
+                    tr("数据库未命中")
+                }
+            ),
+            None => tr("未查询"),
+        },
+    );
+    add_kv(
+        &tr("精确命中"),
+        format!("{}/{}", report.tracks_accurate, report.tracks_ripped),
+    );
+    add_kv(&tr("抓轨错误"), report.errors.to_string());
+    if let Some(t) = &report.total_time {
+        add_kv(&tr("音频总时长"), t.clone());
+    }
+    if let Some(id) = report.disc_id.as_deref() {
+        add_kv(&tr("MusicBrainz DiscID"), id.to_string());
+    }
+    if let Some(m) = report.mcn.as_deref() {
+        add_kv(&tr("碟片 MCN"), m.to_string());
+    }
+    if let Some(p) = report.log_path.as_ref() {
+        add_kv(&tr("日志文件"), p.display().to_string());
+    }
+    ui.result_body.append(&overview);
+    ui.result_body
+        .append(&gtk::Separator::new(Orientation::Horizontal));
+
+    // 明细表
+    let table_title = gtk::Label::new(Some(&tr("曲目明细")));
+    table_title.set_xalign(0.0);
+    table_title.add_css_class("heading");
+    ui.result_body.append(&table_title);
+
+    let table = gtk::Grid::builder()
+        .row_spacing(4)
+        .column_spacing(18)
+        .build();
+    let headers = [
+        tr("轨"),
+        tr("时长"),
+        tr("EAC CRC32"),
+        tr("AR v1"),
+        tr("AR v2"),
+        tr("conf"),
+        tr("状态"),
+    ];
+    for (c, h) in headers.iter().enumerate() {
+        let l = gtk::Label::new(Some(h));
+        l.set_xalign(if c == 0 || c >= 5 { 0.5 } else { 0.0 });
+        l.add_css_class("dim-label");
+        table.attach(&l, c as i32, 0, 1, 1);
+    }
+
+    for (i, t) in report.tracks.iter().enumerate() {
+        let row = i as i32 + 1;
+        let cells: [String; 7] = [
+            format!("{:02}", t.number),
+            t.duration.map(fmt_duration).unwrap_or_else(|| "—".into()),
+            t.crc32
+                .map(|c| format!("{c:08X}"))
+                .unwrap_or_else(|| "—".into()),
+            t.ar_v1
+                .map(|c| format!("{c:08X}"))
+                .unwrap_or_else(|| "—".into()),
             t.ar_v2
                 .map(|c| format!("{c:08X}"))
                 .unwrap_or_else(|| "—".into()),
-            t.ar_confidence.unwrap_or(0)
-        ),
-        ArState::NotFound => tr("AR：未在数据库"),
-        ArState::Mismatch => tr("AR：校验和不一致"),
-        ArState::Unknown => tr("AR：无数据"),
-    };
-    format!("{crc} · {ar}")
+            t.ar_confidence
+                .map(|c| c.to_string())
+                .unwrap_or_else(|| "—".into()),
+            match t.ar_state {
+                ArState::Accurate => tr("精确命中"),
+                ArState::NotFound => tr("未入库"),
+                ArState::Mismatch => tr("不一致"),
+                ArState::Unknown => tr("无数据"),
+            },
+        ];
+        for (c, text) in cells.iter().enumerate() {
+            let l = gtk::Label::new(Some(text));
+            l.set_xalign(if c == 0 || c >= 5 { 0.5 } else { 0.0 });
+            if (2..=4).contains(&c) || c == 1 {
+                l.add_css_class("monospace");
+            }
+            match (c, t.ar_state) {
+                (6, ArState::Accurate) => l.add_css_class("success"),
+                (6, ArState::NotFound) => l.add_css_class("warning"),
+                (6, ArState::Mismatch) => l.add_css_class("error"),
+                (6, ArState::Unknown) => l.add_css_class("dim-label"),
+                _ => {}
+            }
+            table.attach(&l, c as i32, row, 1, 1);
+        }
+    }
+    ui.result_body.append(&table);
 }
 
 /// cyanrip 风格的 ETA：`45s` / `2m` / `1h 3m`
