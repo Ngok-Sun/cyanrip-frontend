@@ -12,6 +12,7 @@ pub mod model;
 pub mod progress;
 pub mod rip;
 pub mod tag;
+pub mod template;
 
 pub use event::{Event, Stage};
 pub use model::{

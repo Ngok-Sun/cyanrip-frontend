@@ -1,0 +1,454 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: cyanrip-frontend\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "cyanrip 前端"
+msgstr "cyanrip Frontend"
+
+msgid "开始抓轨"
+msgstr "Start ripping"
+
+msgid "这张碟是 HDCD（20-bit 解码）"
+msgstr "This disc is HDCD (20-bit decode)"
+
+msgid "刷新"
+msgstr "Refresh"
+
+msgid "重新扫描光驱并读取当前碟片"
+msgstr "Rescan drives and read the current disc"
+
+msgid "弹出光驱托盘"
+msgstr "Eject the disc tray"
+
+msgid "弹出"
+msgstr "Eject"
+
+msgid "测定偏移"
+msgstr "Detect offset"
+
+msgid "读偏移（samples），与 EAC 同符号"
+msgstr "Read offset (samples), same sign as EAC"
+
+msgid "设备"
+msgstr "Device"
+
+msgid "偏移"
+msgstr "Offset"
+
+msgid "尚未探测碟片"
+msgstr "No disc probed yet"
+
+msgid "未识别 · 放入碟片后自动识别"
+msgstr "Unidentified · auto-identify on insert"
+
+msgid "导入曲目信息"
+msgstr "Import track info"
+
+msgid "从 CUE 表读取曲目名/专辑信息（用于 CD 数据库里查不到的碟）"
+msgstr "Read track/album info from a CUE sheet (for discs not in any database)"
+
+msgid "导出 CUE + 封面"
+msgstr "Export CUE + cover"
+
+msgid "把当前曲目信息写成 CUE，并导出封面图"
+msgstr "Write the current track info to a CUE and export the cover"
+
+msgid "无封面"
+msgstr "No cover"
+
+msgid "取得封面"
+msgstr "Get cover"
+
+msgid "全选"
+msgstr "Select all"
+
+msgid "全选 / 取消全选"
+msgstr "Select all / none"
+
+msgid "等待开始"
+msgstr "Waiting to start"
+
+msgid "取消抓轨"
+msgstr "Cancel"
+
+msgid "尚无结果"
+msgstr "No results yet"
+
+msgid "抓轨完成后可识别元数据"
+msgstr "Metadata can be identified after ripping"
+
+msgid "写入标签"
+msgstr "Write tags"
+
+msgid "元数据"
+msgstr "Metadata"
+
+msgid "打开输出目录"
+msgstr "Open output folder"
+
+msgid "复制日志"
+msgstr "Copy log"
+
+msgid "碟片"
+msgstr "Disc"
+
+msgid "进度"
+msgstr "Progress"
+
+msgid "结果"
+msgstr "Result"
+
+msgid "设置"
+msgstr "Settings"
+
+msgid "设备与驱动"
+msgstr "Device & drive"
+
+msgid "Paranoia 级别"
+msgstr "Paranoia level"
+
+msgid "3 = 最高（推荐）"
+msgstr "3 = highest (recommended)"
+
+msgid "帧重试次数"
+msgstr "Frame retries"
+
+msgid "校验次数 (-Z)"
+msgstr "Verify passes (-Z)"
+
+msgid "0 = 单遍；2 = 读到两次校验和一致（约 3 遍）"
+msgstr "0 = single pass; 2 = read until two checksums match (~3 passes)"
+
+msgid "输出格式"
+msgstr "Output format"
+
+msgid "输出"
+msgstr "Output"
+
+msgid "输出根目录"
+msgstr "Output root"
+
+msgid "选择…"
+msgstr "Choose…"
+
+msgid "MusicBrainz → AcoustID → Discogs；token 单独存 secrets.toml（0600）"
+msgstr "MusicBrainz → AcoustID → Discogs; tokens stored in secrets.toml (0600)"
+
+msgid "Discogs access token"
+msgstr "Discogs access token"
+
+msgid "Google API Key（封面兜底，可选）"
+msgstr "Google API Key (cover fallback, optional)"
+
+msgid "Google CX（搜索引擎 ID）"
+msgstr "Google CX (search engine ID)"
+
+msgid "MusicBrainz / Cover Art Archive"
+msgstr "MusicBrainz / Cover Art Archive"
+
+msgid "Discogs"
+msgstr "Discogs"
+
+msgid "Google 图片搜索"
+msgstr "Google image search"
+
+msgid "行为"
+msgstr "Behaviour"
+
+msgid "抓完播放提示音"
+msgstr "Play a sound when done"
+
+msgid "提示音"
+msgstr "Sound"
+
+msgid "试听"
+msgstr "Preview"
+
+msgid "抓完弹出托盘"
+msgstr "Eject tray when done"
+
+msgid "桌面通知"
+msgstr "Desktop notification"
+
+msgid "抓完关机"
+msgstr "Shut down when done"
+
+msgid "默认关闭；开启后仍会二次确认"
+msgstr "Off by default; still asks for confirmation"
+
+msgid "高级"
+msgstr "Advanced"
+
+msgid "cyanrip 可执行文件"
+msgstr "cyanrip executable"
+
+msgid "程序构建时间"
+msgstr "Build time"
+
+msgid "应用"
+msgstr "Apply"
+
+msgid "保存"
+msgstr "Save"
+
+msgid "设置状态"
+msgstr "Settings status"
+
+msgid "所有更改已保存"
+msgstr "All changes saved"
+
+msgid "恢复默认"
+msgstr "Restore defaults"
+
+msgid "恢复默认设置"
+msgstr "Restore default settings"
+
+msgid "不会立即写入，仍需点击保存"
+msgstr "Not written immediately; click Save"
+
+msgid "正在取消…"
+msgstr "Cancelling…"
+
+msgid "选择导出目录"
+msgstr "Choose export folder"
+
+msgid "选择 CUE 文件"
+msgstr "Choose CUE file"
+
+msgid "日志已复制到剪贴板"
+msgstr "Log copied to clipboard"
+
+msgid "选择输出根目录"
+msgstr "Choose output root"
+
+msgid "设置已保存"
+msgstr "Settings saved"
+
+msgid "已恢复默认值，记得保存"
+msgstr "Defaults restored; remember to save"
+
+msgid "有未保存的更改"
+msgstr "Unsaved changes"
+
+msgid "探测失败"
+msgstr "Probe failed"
+
+msgid "正在测定读偏移：需读取部分碟片，约 1–3 分钟"
+msgstr "Detecting read offset: reads part of the disc, about 1–3 minutes"
+
+msgid "读偏移"
+msgstr ""
+
+msgid "测定失败：这张碟可能不在 AccurateRip 数据库中"
+msgstr ""
+
+msgid "未命名"
+msgstr ""
+
+msgid "请先放入并探测碟片"
+msgstr ""
+
+msgid "没有选中任何曲目"
+msgstr ""
+
+msgid "准备中…"
+msgstr ""
+
+msgid "检测到新碟片，已刷新曲目"
+msgstr ""
+
+msgid "轨"
+msgstr ""
+
+msgid "总进度"
+msgstr ""
+
+msgid "已用"
+msgstr ""
+
+msgid "轨完成"
+msgstr ""
+
+msgid "抓轨完成"
+msgstr ""
+
+msgid "轨精确命中"
+msgstr ""
+
+msgid "另一个实例仍在运行，已跳过关机"
+msgstr ""
+
+msgid "抓轨失败"
+msgstr ""
+
+msgid "关闭"
+msgstr ""
+
+msgid "重试"
+msgstr ""
+
+msgid "已取消，完成"
+msgstr ""
+
+msgid "正在抓取轨"
+msgstr ""
+
+msgid "全部精确命中，与 AccurateRip 数据库一致"
+msgstr ""
+
+msgid "存在抓轨错误"
+msgstr ""
+
+msgid "基本命中，个别轨未入库或校验和不一致"
+msgstr ""
+
+msgid "部分轨未通过 AccurateRip 校验"
+msgstr ""
+
+msgid "C2 支持"
+msgstr ""
+
+msgid "支持（仍以多遍比对为准）"
+msgstr ""
+
+msgid "驱动不支持，依赖多遍比对"
+msgstr ""
+
+msgid "AccurateRip"
+msgstr ""
+
+msgid "数据库中有这张碟"
+msgstr ""
+
+msgid "数据库未命中"
+msgstr ""
+
+msgid "未查询"
+msgstr ""
+
+msgid "精确命中"
+msgstr ""
+
+msgid "抓轨错误"
+msgstr ""
+
+msgid "音频总时长"
+msgstr ""
+
+msgid "MusicBrainz DiscID"
+msgstr ""
+
+msgid "碟片 MCN"
+msgstr ""
+
+msgid "日志文件"
+msgstr ""
+
+msgid "曲目明细"
+msgstr ""
+
+msgid "时长"
+msgstr ""
+
+msgid "EAC CRC32"
+msgstr ""
+
+msgid "AR v1"
+msgstr ""
+
+msgid "AR v2"
+msgstr ""
+
+msgid "conf"
+msgstr ""
+
+msgid "状态"
+msgstr ""
+
+msgid "未入库"
+msgstr ""
+
+msgid "不一致"
+msgstr ""
+
+msgid "无数据"
+msgstr ""
+
+msgid "导入失败"
+msgstr "Import failed"
+
+msgid "已导入"
+msgstr "Imported"
+
+msgid "请先识别碟片或导入 CUE"
+msgstr ""
+
+msgid "未识别 · 没有碟片"
+msgstr "Unidentified · no disc"
+
+msgid "等待碟片"
+msgstr ""
+
+msgid "没有碟片"
+msgstr "No disc"
+
+msgid "未启用封面刮削"
+msgstr "Cover scraping disabled"
+
+msgid "无封面（自动获取失败，可点按钮重试）"
+msgstr "No cover (auto-fetch failed; click Get cover to retry)"
+
+msgid "正在取得封面…"
+msgstr "Fetching cover…"
+
+msgid "识别中…"
+msgstr ""
+
+msgid "请先识别元数据"
+msgstr ""
+
+msgid "找不到这次抓轨的目录"
+msgstr ""
+
+msgid "写入标签中…"
+msgstr ""
+
+msgid "封面下载失败"
+msgstr "Cover download failed"
+
+msgid "托盘已弹出"
+msgstr "Tray ejected"
+
+msgid "弹出失败"
+msgstr "Eject failed"
+
+msgid "已导出 "
+msgstr "Exported "
+
+msgid "（含封面）"
+msgstr " (with cover)"
+
+msgid "导出失败"
+msgstr "Export failed"
+
+msgid "未识别 · 没有匹配（可导入 CUE 或换 Discogs token）"
+msgstr ""
+
+msgid "没有找到匹配的发行版（可导入 CUE 或换 token）"
+msgstr "No matching release (import a CUE or set a token)"
+
+msgid "找到候选："
+msgstr "Candidates: "
+
+msgid "已归档到"
+msgstr ""
+
+msgid "标签写入完成"
+msgstr "Tags written"
+
+msgid "写入失败："
+msgstr ""

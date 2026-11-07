@@ -133,7 +133,14 @@ fn tag_cmd(args: &[String]) -> Result<()> {
             .as_deref()
             .and_then(|u| meta::download_cover(u).ok())
     };
-    let dest = tag::apply(&files, release, Path::new(&root), (1, 1), cover.as_deref())?;
+    let dest = tag::apply(
+        &files,
+        release,
+        Path::new(&root),
+        (1, 1),
+        cover.as_deref(),
+        &cyanrip_core::config::OutputSettings::default(),
+    )?;
     println!("已归档到 {}", dest.display());
     Ok(())
 }

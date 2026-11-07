@@ -358,6 +358,7 @@ extra_args = ""
 - **导出 CUE + 封面**：把当前候选写成单镜像风格 CUE（PERFORMER/TITLE/REM DATE/DISCNUMBER/
   TOTALDISCS/CATALOG + 逐轨 INDEX，时间按 TOC 起算，UTF-8 BOM），同时把封面图复制成
   `<专辑>.jpg`；未启用任何刮削器时只导出 CUE
+- **快捷键**：`Ctrl+R` 开始抓轨、`Ctrl+E` 弹出、`F5` 刷新、`Ctrl+Q` 退出
 - **HDCD 复选框**（开始抓轨上方）：「这张碟是 HDCD（20-bit 解码）」。cyanrip 不自动检测，
   由用户判断；勾选后加 `-H`，输出 24-bit FLAC（体积约 +50%），日志里会打印
   `HDCD detected: yes, peak_extend…`；换碟/弹出时自动复位
@@ -379,7 +380,7 @@ extra_args = ""
 单个 `AdwPreferencesPage`，按 `AdwPreferencesGroup` 分组：
 
 1. **设备与驱动**：设备、偏移（+自动检测）、速度、Paranoia、重试、`-Z`、overread、C2 说明
-2. **输出**：根目录（**目录选择器**，不手打路径）、目录/文件/日志/CUE 模板（**仅存储，尚未接到 cyanrip**）、格式三选一、image 模式、CUE/封面/ReplayGain/数据轨开关
+2. **输出**：根目录（**目录选择器**，不手打路径）、目录/文件/日志模板（**归档阶段生效**，见 §8.4）、格式三选一、image 模式、CUE/封面/ReplayGain/数据轨开关
 3. **元数据**：源优先级（可拖动）、**Discogs access token（掩码输入，存 `secrets.toml` 0600，
    不写进 config.toml；首次会从旧的 `~/.config/discogs/token` 回填）**、**Google API Key + CX
    （封面兜底，同样存 secrets.toml）**、**封面刮削器多选（MusicBrainz / Discogs / Google，
@@ -393,6 +394,8 @@ extra_args = ""
 - **显式保存**：改动只标记为"未保存"（状态行 + 保存按钮可用），点保存才原子写 `config.toml`；探测/换碟不会顺手把未保存改动写盘
 - **能选就不打字**：路径类用 `GtkFileDialog` 选目录；提示音从 `/usr/share/sounds/freedesktop/stereo` 里存在的事件名生成下拉（36 个），并带「试听」按钮，避免手打名字写错导致没声音
 - 抓轨中改设置不会影响正在进行的这次抓轨，保存后下一次生效（没有单独的徽标，靠状态行提示）
+- 模板字段：`{artist}` `{album}` `{year}` `{title}` `{track}` `{track:02}` `{disc}` `{disc_total}` `{track_total}`；
+  套装且文件名模板里没有 `{disc}` 时自动补 `CDn-` 前缀；代入值会清理 `/:?*` 等非法字符
 
 ### 7.3 进度页
 
@@ -547,7 +550,19 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 - 写前校验：源文件必须是完整 FLAC（`fLaC` 头 + 非空），避免搬走还在写的半成品
 - 空标题一律回退 `Track NN`，不会产生空白文件名
 
-### 8.4 HDCD
+### 8.4 归档模板
+
+`OutputSettings.{dir_template,file_template,log_template}` 在归档阶段由 `core::template` 渲染：
+
+| 模板 | 默认值 | 说明 |
+|---|---|---|
+| 目录 | `{artist}/{album}` | 相对输出根目录；含 `..` 直接拒绝 |
+| 文件 | `{track:02} {title}` | 自动加 `.flac`；套装补 `CDn-` |
+| 日志 | `{album}` | 把 rip 目录里的 `.log` 复制成 `<渲染值>.log` |
+
+字段在代入前做文件名清理；未知占位符原样保留，便于发现拼写错误。
+
+### 8.5 HDCD
 
 - cyanrip **不做自动检测**，`-H/--hdcd` 默认关闭，日志里的 `HDCD decoding: disabled` 只是开关状态
 - 碟片页提供「这张碟是 HDCD（20-bit 解码）」复选框，勾选才传 `-H`
@@ -674,14 +689,13 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 
 ### M4 — 打磨与扩展（进行中）
 
-已完成的打磨项：应用图标与桌面项、多实例、封面三级兜底与多选、CUE 导入/导出、HDCD 勾选。
+已完成：应用图标与桌面项、多实例、封面三级兜底与多选、CUE 导入/导出、HDCD 勾选、
+归档模板接线（§8.4）、失败重试、快捷键、英文 `po/en.po` 验证。
 
 剩余待办：
 
-- 失败重试（单轨/整碟）
-- 取消语义细化（区分"用户取消"与"驱动错误"）
-- 设置项接线：`-S` 速度、`-D/-F/-L/-M` 模板（或从界面移除）
-- 多语言验证（`po/en.po`）、快捷键
+- `-S` 速度档位接线（或从设置里移除）
+- 取消语义细化（区分"用户取消"与"驱动错误"，目前靠 Cancelled/RipFailed 两个事件区分）
 - 可选 flatpak 打包
 
 > **队列 / 自动换碟：不做**（2026-11-07 决定）。并行需求用多实例 + 两台光驱解决（§7.8）。
@@ -836,12 +850,20 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 **验证基线**：40 单测 + 2 集成测试 + 1 个 GUI 参数拼装测试；clippy 0 警告；
 真碟并发（sr0/sr1 双碟套装）、CUE 导入导出、封面内嵌、HDCD 24-bit 均已实测。
 
+### M4 — 本轮完成（2026-11-07 夜）
+
+| 项 | 实现 | 验证 |
+|---|---|---|
+| 归档模板 | `core::template`（目录/文件/日志），tag::apply 使用设置里的模板，rip 日志随档复制 | 2 个新集成测试（真 flac 编码）+ 单测 4 个 |
+| 失败重试 | 失败对话框增加「重试」，沿用当前选择与参数 | 编译 + 手动路径检查 |
+| 快捷键 | `Ctrl+R` 开始、`Ctrl+E` 弹出、`F5` 刷新、`Ctrl+Q` 退出 | 事件控制器挂载成功 |
+| 多语言 | `po/en.po`（149 条，94 条已译）+ `msgfmt`；`LANGUAGE=en` 下按钮变 "Start ripping" | 双语 selftest 打印 `lang=` |
+| markup 修复 | 分组标题/副标题统一 `markup_escape_text`（英文译名含 `&` 触发 Pango 报错） | en 运行无 Gtk-WARNING |
+
 ### M4 — 剩余工作
 
-- 失败重试（单轨/整碟）
-- 取消语义细化、错误页细化
-- 设置项接线：`-S` 速度、`-D/-F/-L/-M` 模板（或从界面移除）
-- 多语言验证（`po/en.po`）、快捷键
+- `-S` 速度档位接线（或从设置里移除）
+- 取消语义细化（Cancelled/RipFailed 已区分，细到"驱动错误 vs 介质错误"未做）
 - 可选 flatpak 打包
 - 可选：HDCD 自动检测（读 60s + ffmpeg 分析，命中自动勾选）
 
@@ -881,6 +903,7 @@ CYANRIP_GUI_STANDALONE=1 CYANRIP_GUI_SELFTEST=1 ./target/debug/cyanrip-frontend
 
 | commit | 日期 | 说明 |
 |---|---|---|
+| `7565995` | 11-07 | docs: full accuracy pass; drop queue/auto-disc-change from M4 |
 | `fe5e36e` | 11-07 | docs: fold all changes since M3 into the project plan |
 | `40fc42f` | 11-07 | disc page: user-controlled HDCD decoding checkbox (-H) |
 | `4b9efb4` | 11-07 | ui: disable markup on track rows (ampersand titles rendered blank) |

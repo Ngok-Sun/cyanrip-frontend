@@ -12,6 +12,10 @@ pub fn init() {
     // 允许从源码树（cargo run）与系统安装目录两处加载翻译
     let _ = gettextrs::bindtextdomain(DOMAIN, concat!(env!("CARGO_MANIFEST_DIR"), "/../../po"));
     let _ = gettextrs::bindtextdomain(DOMAIN, "/usr/share/locale");
+    // 用户级安装（不污染系统目录）
+    if let Ok(home) = std::env::var("HOME") {
+        let _ = gettextrs::bindtextdomain(DOMAIN, format!("{home}/.local/share/locale"));
+    }
     let _ = gettextrs::textdomain(DOMAIN);
     let _ = gettextrs::setlocale(LocaleCategory::LcAll, "");
 }

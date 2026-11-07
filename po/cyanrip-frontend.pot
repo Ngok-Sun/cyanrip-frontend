@@ -1,0 +1,622 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-07 23:52+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: crates/cyanrip-gui/src/ui.rs:139
+msgid "cyanrip 前端"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:156
+msgid "开始抓轨"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:163
+msgid "这张碟是 HDCD（20-bit 解码）"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:165
+msgid ""
+"不确定就别勾。勾选后 cyanrip 用 HDCD 解码，输出为 24-bit FLAC（体积约 +50%）"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:189
+msgid "刷新"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:190
+msgid "重新扫描光驱并读取当前碟片"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:197
+msgid "弹出光驱托盘"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:198
+msgid "弹出"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:199
+msgid "测定偏移"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:202
+msgid "读偏移（samples），与 EAC 同符号"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:205 crates/cyanrip-gui/src/ui.rs:1986
+msgid "设备"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:209
+msgid "偏移"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:213 crates/cyanrip-gui/src/ui.rs:1443
+msgid "尚未探测碟片"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:218
+msgid "未识别 · 放入碟片后自动识别"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:225
+msgid "导入曲目信息"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:227
+msgid "从 CUE 表读取曲目名/专辑信息（用于 CD 数据库里查不到的碟）"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:229
+msgid "导出 CUE + 封面"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:230
+msgid "把当前曲目信息写成 CUE，并导出封面图"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:245 crates/cyanrip-gui/src/ui.rs:1277
+#: crates/cyanrip-gui/src/ui.rs:2324 crates/cyanrip-gui/src/ui.rs:2364
+msgid "无封面"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:249
+msgid "取得封面"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:270
+msgid "全选"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:272
+msgid "全选 / 取消全选"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:295
+msgid "等待开始"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:323
+msgid "取消抓轨"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:340
+msgid "尚无结果"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:355
+msgid "抓轨完成后可识别元数据"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:358
+msgid "写入标签"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:364 crates/cyanrip-gui/src/ui.rs:604
+msgid "元数据"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:371
+msgid "打开输出目录"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:372
+msgid "复制日志"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:412 crates/cyanrip-gui/src/ui.rs:1990
+msgid "碟片"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:413
+msgid "进度"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:414
+msgid "结果"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:415
+msgid "设置"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:539
+msgid "设备与驱动"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:545 crates/cyanrip-gui/src/ui.rs:2009
+msgid "Paranoia 级别"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:546
+msgid "3 = 最高（推荐）"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:552
+msgid "帧重试次数"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:558
+msgid "校验次数 (-Z)"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:559
+msgid "0 = 单遍；2 = 读到两次校验和一致（约 3 遍）"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:564
+msgid "输出格式"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:589
+msgid "输出"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:592
+msgid "输出根目录"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:597
+msgid "选择…"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:606
+msgid "MusicBrainz → AcoustID → Discogs；token 单独存 secrets.toml（0600）"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:610
+msgid "Discogs access token"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:615
+msgid "Google API Key（封面兜底，可选）"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:619
+msgid "Google CX（搜索引擎 ID）"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:630
+msgid "MusicBrainz / Cover Art Archive"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:631
+msgid "Discogs"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:632
+msgid "Google 图片搜索"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:648
+msgid "行为"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:650
+msgid "抓完播放提示音"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:661
+msgid "提示音"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:665
+msgid "试听"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:669
+msgid "抓完弹出托盘"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:673
+msgid "桌面通知"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:677
+msgid "抓完关机"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:678
+msgid "默认关闭；开启后仍会二次确认"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:688
+msgid "高级"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:690
+msgid "cyanrip 可执行文件"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:706
+msgid "程序构建时间"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:713
+msgid "应用"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:714
+msgid "保存"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:720
+msgid "设置状态"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:721 crates/cyanrip-gui/src/ui.rs:1170
+msgid "所有更改已保存"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:725
+msgid "恢复默认"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:728
+msgid "恢复默认设置"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:729
+msgid "不会立即写入，仍需点击保存"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:871
+msgid "正在取消…"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:923
+msgid "选择导出目录"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:954
+msgid "选择 CUE 文件"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:998
+msgid "日志已复制到剪贴板"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1044
+msgid "选择输出根目录"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1172
+msgid "设置已保存"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1187
+msgid "已恢复默认值，记得保存"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1237
+msgid "有未保存的更改"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1290
+msgid "探测失败"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1307
+msgid "正在测定读偏移：需读取部分碟片，约 1–3 分钟"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1343 crates/cyanrip-gui/src/ui.rs:1994
+msgid "读偏移"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1348
+msgid "测定失败：这张碟可能不在 AccurateRip 数据库中"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1458
+msgid "未命名"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1495 crates/cyanrip-gui/src/ui.rs:2505
+msgid "请先放入并探测碟片"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1500
+msgid "没有选中任何曲目"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1543
+msgid "准备中…"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1693
+msgid "检测到新碟片，已刷新曲目"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1779 crates/cyanrip-gui/src/ui.rs:1908
+#: crates/cyanrip-gui/src/ui.rs:1991 crates/cyanrip-gui/src/ui.rs:2058
+#: crates/cyanrip-gui/src/ui.rs:2166
+msgid "轨"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1784
+msgid "总进度"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1796
+msgid "已用"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1822
+msgid "轨完成"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1847
+msgid "抓轨完成"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1852 crates/cyanrip-gui/src/ui.rs:1945
+msgid "轨精确命中"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1860
+msgid "另一个实例仍在运行，已跳过关机"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1878
+msgid "抓轨失败"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1881
+msgid "关闭"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1882
+msgid "重试"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1906
+msgid "已取消，完成"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1921
+msgid "正在抓取轨"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1933
+msgid "全部精确命中，与 AccurateRip 数据库一致"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1935
+msgid "存在抓轨错误"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1937
+msgid "基本命中，个别轨未入库或校验和不一致"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1939
+msgid "部分轨未通过 AccurateRip 校验"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2001
+msgid "C2 支持"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2003
+msgid "支持（仍以多遍比对为准）"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2004
+msgid "驱动不支持，依赖多遍比对"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2013
+msgid "AccurateRip"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2018
+msgid "数据库中有这张碟"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2020
+msgid "数据库未命中"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2023
+msgid "未查询"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2027 crates/cyanrip-gui/src/ui.rs:2091
+msgid "精确命中"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2030
+msgid "抓轨错误"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2032
+msgid "音频总时长"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2035
+msgid "MusicBrainz DiscID"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2038
+msgid "碟片 MCN"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2041
+msgid "日志文件"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2048
+msgid "曲目明细"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2059
+msgid "时长"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2060
+msgid "EAC CRC32"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2061
+msgid "AR v1"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2062
+msgid "AR v2"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2063
+msgid "conf"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2064
+msgid "状态"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2092
+msgid "未入库"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2093
+msgid "不一致"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2094
+msgid "无数据"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2137
+msgid "导入失败"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2172
+msgid "已导入"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2183
+msgid "请先识别碟片或导入 CUE"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2317
+msgid "未识别 · 没有碟片"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2319
+msgid "等待碟片"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2327
+msgid "没有碟片"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2358
+msgid "未启用封面刮削"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2417
+msgid "无封面（自动获取失败，可点按钮重试）"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2423
+msgid "正在取得封面…"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2518 crates/cyanrip-gui/src/ui.rs:2519
+msgid "识别中…"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2561
+msgid "请先识别元数据"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2571
+msgid "找不到这次抓轨的目录"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2578
+msgid "写入标签中…"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2636 crates/cyanrip-gui/src/ui.rs:2638
+msgid "封面下载失败"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2652
+msgid "托盘已弹出"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2656
+msgid "弹出失败"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2673
+msgid "已导出 "
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2676
+msgid "（含封面）"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2684
+msgid "导出失败"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2730
+msgid "未识别 · 没有匹配（可导入 CUE 或换 Discogs token）"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2733
+msgid "没有找到匹配的发行版（可导入 CUE 或换 token）"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2761
+msgid "找到候选："
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2783
+msgid "已归档到"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2784
+msgid "标签写入完成"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:2788
+msgid "写入失败："
+msgstr ""

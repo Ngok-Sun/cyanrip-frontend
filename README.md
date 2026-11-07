@@ -69,6 +69,29 @@ gtk-update-icon-cache -f -t ~/.local/share/icons/hicolor
 - **结果页「元数据」**：抓轨后自动识别（MusicBrainz → Discogs 条码/MCN → AcoustID），下拉选候选后「写入标签」，自动归档到 `艺人/专辑/` 并写 FLAC 标签
 - **设置**：设备与驱动 / 输出（根目录用目录选择器）/ 元数据（Discogs token 掩码输入，存 `secrets.toml` 0600）/ 行为（提示音下拉 + 试听、托盘、通知、关机）/ 高级（含构建时间）/ **应用**（显式保存 + 恢复默认）
 
+## 归档模板
+
+设置 → 输出 里可改目录/文件/日志模板，归档阶段生效：
+
+- 字段：`{artist}` `{album}` `{year}` `{title}` `{track}` `{track:02}` `{disc}` `{disc_total}` `{track_total}`
+- 默认：目录 `{artist}/{album}`、文件 `{track:02} {title}`、日志 `{album}`
+- 套装且文件名模板不含 `{disc}` 时自动补 `CDn-` 前缀
+- 值会做文件名清理；目录里出现 `..` 直接拒绝
+
+## 快捷键
+
+`Ctrl+R` 开始抓轨 · `Ctrl+E` 弹出 · `F5` 刷新 · `Ctrl+Q` 退出
+
+## 界面语言
+
+默认中文（msgid 即中文）。`po/en.po` 是语言机制验证，编译后放到
+`po/en/LC_MESSAGES/cyanrip-frontend.mo` 或 `~/.local/share/locale/en/LC_MESSAGES/`：
+
+```bash
+msgfmt -o po/en/LC_MESSAGES/cyanrip-frontend.mo po/en.po
+LANGUAGE=en cyanrip-frontend
+```
+
 ## 自测开关
 
 | 变量 | 作用 |

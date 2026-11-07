@@ -4,6 +4,11 @@
 //! 上报 core 的 `Event`，UI 用 100ms 定时器轮询，避免 GTK 主线程阻塞。
 
 use crate::i18n::tr;
+
+/// 用于会被当作 Pango markup 解析的控件（AdwPreferencesGroup 标题、AdwActionRow 副标题）
+fn trm(msgid: &str) -> String {
+    glib::markup_escape_text(&tr(msgid)).to_string()
+}
 use crate::state::{AppState, Phase};
 use adw::prelude::*;
 use cyanrip_core::config::Settings;
@@ -536,14 +541,14 @@ fn build_settings_page(state: &Rc<RefCell<AppState>>) -> SettingsWidgets {
 
     // 设备与驱动
     let device_group = adw::PreferencesGroup::builder()
-        .title(tr("设备与驱动"))
+        .title(trm("设备与驱动"))
         .build();
 
     let paranoia_spin = gtk::SpinButton::with_range(0.0, 3.0, 1.0);
     paranoia_spin.set_value(s.rip.paranoia as f64);
     let paranoia_row = adw::ActionRow::builder()
         .title(tr("Paranoia 级别"))
-        .subtitle(tr("3 = 最高（推荐）"))
+        .subtitle(trm("3 = 最高（推荐）"))
         .build();
     paranoia_row.add_suffix(&paranoia_spin);
 
@@ -556,7 +561,7 @@ fn build_settings_page(state: &Rc<RefCell<AppState>>) -> SettingsWidgets {
     verify_spin.set_value(s.rip.verify_passes as f64);
     let verify_row = adw::ActionRow::builder()
         .title(tr("校验次数 (-Z)"))
-        .subtitle(tr("0 = 单遍；2 = 读到两次校验和一致（约 3 遍）"))
+        .subtitle(trm("0 = 单遍；2 = 读到两次校验和一致（约 3 遍）"))
         .build();
     verify_row.add_suffix(&verify_spin);
 
@@ -586,7 +591,7 @@ fn build_settings_page(state: &Rc<RefCell<AppState>>) -> SettingsWidgets {
     device_group.add(&formats_combo);
 
     // 输出
-    let output_group = adw::PreferencesGroup::builder().title(tr("输出")).build();
+    let output_group = adw::PreferencesGroup::builder().title(trm("输出")).build();
     // 目录只能用选择器改，避免手打路径出错
     let root_row = adw::ActionRow::builder()
         .title(tr("输出根目录"))
@@ -601,7 +606,7 @@ fn build_settings_page(state: &Rc<RefCell<AppState>>) -> SettingsWidgets {
 
     // 元数据（M3 才真正使用）
     let meta_group = adw::PreferencesGroup::builder()
-        .title(tr("元数据"))
+        .title(trm("元数据"))
         .description(tr(
             "MusicBrainz → AcoustID → Discogs；token 单独存 secrets.toml（0600）",
         ))
@@ -645,7 +650,7 @@ fn build_settings_page(state: &Rc<RefCell<AppState>>) -> SettingsWidgets {
     let cover_checks: [gtk::CheckButton; 3] = cover_checks.try_into().unwrap();
 
     // 行为
-    let behavior_group = adw::PreferencesGroup::builder().title(tr("行为")).build();
+    let behavior_group = adw::PreferencesGroup::builder().title(trm("行为")).build();
     let sound_switch = adw::SwitchRow::builder()
         .title(tr("抓完播放提示音"))
         .active(s.behavior.sound)
@@ -675,7 +680,7 @@ fn build_settings_page(state: &Rc<RefCell<AppState>>) -> SettingsWidgets {
         .build();
     let shutdown_switch = adw::SwitchRow::builder()
         .title(tr("抓完关机"))
-        .subtitle(tr("默认关闭；开启后仍会二次确认"))
+        .subtitle(trm("默认关闭；开启后仍会二次确认"))
         .active(s.behavior.shutdown_when_done)
         .build();
     behavior_group.add(&sound_switch);
@@ -685,7 +690,7 @@ fn build_settings_page(state: &Rc<RefCell<AppState>>) -> SettingsWidgets {
     behavior_group.add(&shutdown_switch);
 
     // 高级
-    let advanced_group = adw::PreferencesGroup::builder().title(tr("高级")).build();
+    let advanced_group = adw::PreferencesGroup::builder().title(trm("高级")).build();
     let bin_entry = adw::EntryRow::builder()
         .title(tr("cyanrip 可执行文件"))
         .text(s.advanced.bin.clone())
@@ -710,7 +715,7 @@ fn build_settings_page(state: &Rc<RefCell<AppState>>) -> SettingsWidgets {
     advanced_group.add(&build_row);
 
     // 应用：显式保存（用户要求有保存按钮），未保存时状态行会提示
-    let apply_group = adw::PreferencesGroup::builder().title(tr("应用")).build();
+    let apply_group = adw::PreferencesGroup::builder().title(trm("应用")).build();
     let save_btn = gtk::Button::with_label(&tr("保存"));
     save_btn.add_css_class("suggested-action");
     save_btn.set_valign(gtk::Align::Center);
@@ -718,7 +723,7 @@ fn build_settings_page(state: &Rc<RefCell<AppState>>) -> SettingsWidgets {
 
     let status = adw::ActionRow::builder()
         .title(tr("设置状态"))
-        .subtitle(tr("所有更改已保存"))
+        .subtitle(trm("所有更改已保存"))
         .build();
     status.add_suffix(&save_btn);
 
@@ -726,7 +731,7 @@ fn build_settings_page(state: &Rc<RefCell<AppState>>) -> SettingsWidgets {
     reset_btn.set_valign(gtk::Align::Center);
     let reset_row = adw::ActionRow::builder()
         .title(tr("恢复默认设置"))
-        .subtitle(tr("不会立即写入，仍需点击保存"))
+        .subtitle(trm("不会立即写入，仍需点击保存"))
         .build();
     reset_row.add_suffix(&reset_btn);
 
@@ -878,6 +883,42 @@ fn connect_signals(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
         ui.meta_apply_btn
             .connect_clicked(move |_| apply_meta(&ui2, &st));
     }
+    // 快捷键：Ctrl+R 开始，Ctrl+E 弹出，F5 刷新，Ctrl+Q 退出
+    {
+        let ui2 = ui.clone();
+        let st = state.clone();
+        let keys = gtk::EventControllerKey::new();
+        keys.connect_key_pressed(move |_, key, _, mods| {
+            use gtk::gdk::ModifierType;
+            let ctrl = mods.contains(ModifierType::CONTROL_MASK);
+            let handled = match (ctrl, key) {
+                (true, gtk::gdk::Key::r | gtk::gdk::Key::R) => {
+                    start_rip(&ui2, &st);
+                    true
+                }
+                (true, gtk::gdk::Key::e | gtk::gdk::Key::E) => {
+                    ui2.eject_btn.emit_clicked();
+                    true
+                }
+                (false, gtk::gdk::Key::F5) => {
+                    ui2.rescan_btn.emit_clicked();
+                    true
+                }
+                (true, gtk::gdk::Key::q | gtk::gdk::Key::Q) => {
+                    ui2.window.close();
+                    true
+                }
+                _ => false,
+            };
+            if handled {
+                glib::Propagation::Stop
+            } else {
+                glib::Propagation::Proceed
+            }
+        });
+        ui.window.add_controller(keys);
+    }
+
     // 导出 CUE + 封面
     {
         let ui2 = ui.clone();
@@ -1843,6 +1884,16 @@ fn handle_event(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>, ev: Event) {
                 .body(format!("{}：{message}", stage.as_str()))
                 .build();
             dialog.add_response("close", &tr("关闭"));
+            dialog.add_response("retry", &tr("重试"));
+            dialog.set_default_response(Some("retry"));
+            dialog.set_close_response("close");
+            let ui2 = ui.clone();
+            let st2 = state.clone();
+            dialog.connect_response(None, move |_, resp| {
+                if resp == "retry" {
+                    start_rip(&ui2, &st2);
+                }
+            });
             dialog.present(Some(&ui.window));
         }
         Event::Cancelled { completed_tracks } => {
@@ -2527,6 +2578,7 @@ fn apply_meta(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
     };
     let root = state.borrow().settings.output.root.clone();
     let cached_cover = ui.cover_cache.borrow().clone();
+    let tpl = state.borrow().settings.output.clone();
     let cover_enabled = !state.borrow().settings.meta.cover_sources.is_empty();
     ui.meta_status.set_text(&tr("写入标签中…"));
     ui.meta_apply_btn.set_sensitive(false);
@@ -2550,7 +2602,7 @@ fn apply_meta(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
                     .and_then(|u| meta::download_cover(u).ok()),
             }
         };
-        let out = match tag::apply(&files, &release, &root, (1, 1), cover.as_deref()) {
+        let out = match tag::apply(&files, &release, &root, (1, 1), cover.as_deref(), &tpl) {
             Ok(d) => MetaOutcome::Applied(d),
             Err(e) => MetaOutcome::ApplyFailed(format!("{e:#}")),
         };

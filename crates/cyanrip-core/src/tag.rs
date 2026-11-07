@@ -40,13 +40,15 @@ fn keep_tag(line: &str) -> bool {
 
 /// 对一批文件应用元数据，返回归档目录。
 ///
-/// `files` 必须按音轨顺序排列；`disc` 为 (本碟号, 总碟数)。
+/// `files` 必须按音轨顺序排列；`disc` 为 (本碟号, 总碟数)；
+/// `tpl` 提供目录/文件/日志模板（见 `config::OutputSettings`）。
 pub fn apply(
     files: &[PathBuf],
     release: &MetaRelease,
     root: &Path,
     disc: (u32, u32),
     cover: Option<&Path>,
+    tpl: &crate::config::OutputSettings,
 ) -> Result<PathBuf> {
     if files.is_empty() {
         bail!("没有可写标签的文件");
@@ -57,13 +59,28 @@ pub fn apply(
     } else {
         disc
     };
-    let artist = sanitize(&release.artist);
-    let album = sanitize(&release.title);
-    let dest_dir = if artist.is_empty() || artist == "未命名" {
-        root.join(&album)
+    let year = release.date.clone().unwrap_or_default();
+    let year = year.split('-').next().unwrap_or("").to_string();
+    let track_total = if release.tracks.is_empty() {
+        files.len() as u32
     } else {
-        root.join(&artist).join(&album)
+        release.tracks.len() as u32
     };
+    let ctx = crate::template::Ctx {
+        artist: &release.artist,
+        album: &release.title,
+        year: &year,
+        title: "",
+        track: 0,
+        track_total,
+        disc: disc.0,
+        disc_total: disc.1,
+    };
+    let rel_dir = crate::template::render(&tpl.dir_template, &ctx);
+    if rel_dir.split('/').any(|c| c == ".." || c == ".") {
+        bail!("目录模板非法：{}", tpl.dir_template);
+    }
+    let dest_dir = root.join(rel_dir.trim_start_matches('/'));
     std::fs::create_dir_all(&dest_dir)
         .with_context(|| format!("创建目录失败：{}", dest_dir.display()))?;
 
@@ -74,12 +91,15 @@ pub fn apply(
             .filter(|t| !t.trim().is_empty())
             .unwrap_or_else(|| format!("Track {:02}", i + 1));
         let number = meta.map(|t| t.number).unwrap_or(i as u32 + 1);
-        let name = if disc.1 > 1 {
-            format!("CD{}-{number:02} {title}.flac", disc.0)
-        } else {
-            format!("{number:02} {title}.flac")
+        let file_ctx = crate::template::Ctx {
+            title: &title,
+            track: number,
+            ..ctx
         };
-        let dest = dest_dir.join(name);
+        let prefix = crate::template::disc_prefix(&tpl.file_template, disc.0, disc.1);
+        let stem = crate::template::render(&tpl.file_template, &file_ctx);
+        let name = format!("{prefix}{stem}.flac");
+        let dest = dest_dir.join(&name);
 
         if src != &dest {
             if dest.exists() {
@@ -109,6 +129,21 @@ pub fn apply(
                 .status();
         }
     }
+    // 把 rip 日志复制进归档目录（模板可控）
+    if let Some(src_log) = files.first().and_then(|f| f.parent()).and_then(|d| {
+        std::fs::read_dir(d)
+            .ok()?
+            .flatten()
+            .map(|e| e.path())
+            .find(|p| p.extension().and_then(|x| x.to_str()) == Some("log"))
+    }) {
+        let log_name = crate::template::render(&tpl.log_template, &ctx);
+        let dest = dest_dir.join(format!("{}.log", log_name.trim_end_matches(".log")));
+        if !dest.exists() {
+            std::fs::copy(&src_log, &dest).ok();
+        }
+    }
+
     // 封面除了内嵌，也单独存一份到专辑目录（播放器/文件管理器常用）
     if let Some(cover) = cover {
         let dest = dest_dir.join(format!("cover.{}", image_ext(cover)));
