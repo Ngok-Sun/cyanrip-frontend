@@ -14,7 +14,12 @@ const APP_ID: &str = "io.github.cyanrip.Frontend";
 
 fn main() -> glib::ExitCode {
     i18n::init();
-    let app = adw::Application::builder().application_id(APP_ID).build();
+    let mut builder = adw::Application::builder().application_id(APP_ID);
+    // 自测时需要与用户已打开的实例并存
+    if std::env::var("CYANRIP_GUI_STANDALONE").as_deref() == Ok("1") {
+        builder = builder.flags(gtk::gio::ApplicationFlags::NON_UNIQUE);
+    }
+    let app = builder.build();
 
     app.connect_activate(|app| {
         let state = Rc::new(RefCell::new(state::AppState::new()));

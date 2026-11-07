@@ -129,8 +129,11 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
     let bar_total = gtk::ProgressBar::new();
     bar_total.set_show_text(true);
 
+    // 与终端等价的单行进度：数字原地变化，不再把每帧进度写进日志
     let stats_label = gtk::Label::new(Some(""));
     stats_label.set_xalign(0.0);
+    stats_label.set_ellipsize(gtk::pango::EllipsizeMode::End);
+    stats_label.add_css_class("monospace");
     stats_label.add_css_class("dim-label");
 
     let log_view = gtk::TextView::builder()
@@ -755,7 +758,7 @@ pub fn start_rip(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
     ui.progress_title.set_text(&tr("准备中…"));
     ui.bar_track.set_fraction(0.0);
     ui.bar_total.set_fraction(0.0);
-    ui.stats_label.set_text("");
+    ui.stats_label.set_text("等待第一帧进度…");
     ui.cancel_btn.set_sensitive(true);
     ui.start_btn.set_sensitive(false);
     ui.stack.set_visible_child_name("progress");
@@ -863,16 +866,19 @@ fn handle_event(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>, ev: Event) {
             ui.bar_total.set_fraction(p.overall_pct as f64 / 100.0);
             ui.bar_total
                 .set_text(Some(&format!("{} {:.1}%", tr("总进度"), p.overall_pct)));
+            let eta = p.eta.map(fmt_eta).unwrap_or_else(|| "?".into());
+            let speed = p
+                .speed_x
+                .map(|x| format!("{x:.1}x"))
+                .unwrap_or_else(|| "—".into());
             ui.stats_label.set_text(&format!(
-                "{} {} · {} {} · {} {}",
-                tr("倍速"),
-                p.speed_x
-                    .map(|x| format!("{x:.1}x"))
-                    .unwrap_or_else(|| "—".into()),
+                "Ripping track {}, progress - {:.2}%, ETA - {}   ·   {} · {} {}",
+                p.track,
+                p.track_pct,
+                eta,
+                speed,
                 tr("已用"),
-                fmt_duration(p.elapsed),
-                tr("剩余"),
-                p.eta.map(fmt_duration).unwrap_or_else(|| "—".into()),
+                fmt_duration(p.elapsed)
             ));
         }
         Event::LogLine(line) => {
@@ -1019,6 +1025,18 @@ fn describe_track(t: &TrackResult) -> String {
         ArState::Unknown => tr("AR：无数据"),
     };
     format!("{crc} · {ar}")
+}
+
+/// cyanrip 风格的 ETA：`45s` / `2m` / `1h 3m`
+fn fmt_eta(d: Duration) -> String {
+    let s = d.as_secs();
+    if s >= 3600 {
+        format!("{}h {}m", s / 3600, (s % 3600) / 60)
+    } else if s >= 60 {
+        format!("{}m", s / 60)
+    } else {
+        format!("{s}s")
+    }
 }
 
 fn play_done_sound(settings: &Settings) {

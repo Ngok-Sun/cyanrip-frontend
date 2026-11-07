@@ -204,8 +204,9 @@ pub async fn run(
                 let Ok(line) = line else { break };
                 captured.push_str(&line);
                 captured.push('\n');
-                let _ = tx.send(Event::LogLine(line.clone())).await;
 
+                // 进度行只走 Progress 事件：UI 用它刷新"一行原地变化"的状态条，
+                // 不再逐帧写进日志面板（否则日志会被成千上万行 \r 片段淹没）。
                 if let Some(p) = parse_progress(&line) {
                     if p.track != current_track {
                         current_track = p.track;
@@ -216,7 +217,11 @@ pub async fn run(
                         let _ = tx.send(Event::Progress(update)).await;
                         last_emit = Instant::now();
                     }
-                } else if let Some(n) = parse_track_done(&line) {
+                    continue;
+                }
+
+                let _ = tx.send(Event::LogLine(line.clone())).await;
+                if let Some(n) = parse_track_done(&line) {
                     let _ = tx.send(Event::TrackDone(TrackResult::new(n))).await;
                 }
             }

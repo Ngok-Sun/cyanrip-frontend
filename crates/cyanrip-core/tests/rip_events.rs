@@ -97,6 +97,7 @@ async fn streams_events_and_parses_report() {
     let mut track_done = Vec::new();
     let mut finished = false;
     let mut started = 0usize;
+    let mut log_lines: Vec<String> = Vec::new();
     while let Ok(ev) = rx.try_recv() {
         match ev {
             Event::Progress(p) => {
@@ -104,6 +105,7 @@ async fn streams_events_and_parses_report() {
                 assert!(p.overall_pct >= 0.0 && p.overall_pct <= 100.0);
             }
             Event::TrackStarted { .. } => started += 1,
+            Event::LogLine(l) => log_lines.push(l),
             Event::TrackDone(t) => track_done.push(t.number),
             Event::RipFinished { .. } => finished = true,
             _ => {}
@@ -111,6 +113,16 @@ async fn streams_events_and_parses_report() {
     }
 
     assert!(progress > 0, "应收到进度事件");
+    assert!(
+        !log_lines.iter().any(|l| l.contains("progress -")),
+        "进度行不应进入日志通道"
+    );
+    assert!(
+        log_lines
+            .iter()
+            .any(|l| l.contains("ripped and encoded successfully")),
+        "普通日志行仍应保留"
+    );
     assert!(
         started >= 2,
         "两轨各应触发一次 TrackStarted，实际 {started}"
