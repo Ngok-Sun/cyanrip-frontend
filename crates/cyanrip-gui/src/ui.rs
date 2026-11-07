@@ -113,6 +113,7 @@ pub struct Ui {
     pub cover_mb_check: gtk::CheckButton,
     pub cover_discogs_check: gtk::CheckButton,
     pub cover_google_check: gtk::CheckButton,
+    pub lang_combo: adw::ComboRow,
     pub sound_switch: adw::SwitchRow,
     pub theme_combo: adw::ComboRow,
     pub theme_test_btn: gtk::Button,
@@ -402,6 +403,7 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
         google_key: google_key_row,
         google_cx: google_cx_row,
         cover_checks,
+        lang: lang_combo,
         sound: sound_switch,
         theme: theme_combo,
         theme_test: theme_test_btn,
@@ -488,6 +490,7 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
         cover_mb_check: cover_checks[0].clone(),
         cover_discogs_check: cover_checks[1].clone(),
         cover_google_check: cover_checks[2].clone(),
+        lang_combo,
         sound_switch,
         theme_combo,
         theme_test_btn,
@@ -511,6 +514,7 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
 
 struct SettingsWidgets {
     page: adw::PreferencesPage,
+    lang: adw::ComboRow,
     paranoia: gtk::SpinButton,
     retries: gtk::SpinButton,
     verify: gtk::SpinButton,
@@ -651,6 +655,19 @@ fn build_settings_page(state: &Rc<RefCell<AppState>>) -> SettingsWidgets {
 
     // 行为
     let behavior_group = adw::PreferencesGroup::builder().title(trm("行为")).build();
+    let lang_labels = gtk::StringList::new(&[&tr("跟随系统"), "中文", "English"]);
+    let lang_index = match s.ui.language.as_str() {
+        "en" => 2u32,
+        "auto" => 0u32,
+        _ => 1u32,
+    };
+    let lang_combo = adw::ComboRow::builder()
+        .title(tr("界面语言"))
+        .subtitle(tr("更改后需重启程序生效"))
+        .model(&lang_labels)
+        .selected(lang_index)
+        .build();
+    behavior_group.add(&lang_combo);
     let sound_switch = adw::SwitchRow::builder()
         .title(tr("抓完播放提示音"))
         .active(s.behavior.sound)
@@ -758,6 +775,7 @@ fn build_settings_page(state: &Rc<RefCell<AppState>>) -> SettingsWidgets {
         google_key: google_key_row,
         google_cx: google_cx_row,
         cover_checks,
+        lang: lang_combo,
         sound: sound_switch,
         theme: theme_combo,
         theme_test,
@@ -1108,6 +1126,19 @@ fn connect_signals(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
     {
         let st = state.clone();
         let ui2 = ui.clone();
+        ui.lang_combo.connect_selected_notify(move |row| {
+            let lang = match row.selected() {
+                0 => "auto",
+                2 => "en",
+                _ => "zh",
+            };
+            st.borrow_mut().settings.ui.language = lang.to_string();
+            mark_dirty(&ui2, &st);
+        });
+    }
+    {
+        let st = state.clone();
+        let ui2 = ui.clone();
         ui.sound_switch.connect_active_notify(move |w| {
             st.borrow_mut().settings.behavior.sound = w.is_active();
             mark_dirty(&ui2, &st);
@@ -1223,6 +1254,12 @@ fn refresh_settings_widgets(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
     ui.google_key_row
         .set_text(&state.borrow().secrets.google_api_key);
     ui.google_cx_row.set_text(&state.borrow().secrets.google_cx);
+    let lang_idx = match s.ui.language.as_str() {
+        "en" => 2u32,
+        "auto" => 0u32,
+        _ => 1u32,
+    };
+    ui.lang_combo.set_selected(lang_idx);
     ui.sound_switch.set_active(s.behavior.sound);
     let theme_idx = ui
         .sound_events

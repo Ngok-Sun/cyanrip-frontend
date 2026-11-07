@@ -14,7 +14,14 @@ use std::rc::Rc;
 const APP_ID: &str = "io.github.cyanrip.Frontend";
 
 fn main() -> glib::ExitCode {
-    i18n::init();
+    // 语言要在 GTK 初始化前定下来（gettext 只读一次 locale）
+    let cfg_path = std::env::var("CYANRIP_GUI_CONFIG")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| cyanrip_core::config::Settings::default_path());
+    let lang = cyanrip_core::config::Settings::load(&cfg_path)
+        .map(|s| s.ui.language)
+        .unwrap_or_else(|_| "zh".into());
+    i18n::init_with(&lang);
     let mut builder = adw::Application::builder().application_id(APP_ID);
     // 自测时需要与用户已打开的实例并存
     if std::env::var("CYANRIP_GUI_STANDALONE").as_deref() == Ok("1") {
@@ -22,7 +29,9 @@ fn main() -> glib::ExitCode {
     }
     let app = builder.build();
 
-    app.connect_activate(|app| {
+    app.connect_activate(move |app| {
+        // GTK 初始化会重置 locale，这里再按设置应用一次
+        i18n::apply_language(&lang);
         let state = Rc::new(RefCell::new(state::AppState::new()));
         // 登记本实例（多开时用于「抓完关机」互斥与调试）
         let lock = instance::register(&state.borrow().device);
@@ -192,6 +201,22 @@ fn main() -> glib::ExitCode {
                     .map(|c| c.contains("tok-test-123"))
                     .unwrap_or(false);
 
+                // 语言下拉：改 → 内存生效 → 保存落盘 → 还原
+                let lang_before = st2.borrow().settings.ui.language.clone();
+                ui2.lang_combo.set_selected(2);
+                let lang_dirty = st2.borrow().settings.ui.language == "en";
+                ui2.save_btn.emit_clicked();
+                let lang_saved = std::fs::read_to_string(&st2.borrow().config_path)
+                    .map(|c| c.contains("language = \"en\""))
+                    .unwrap_or(false);
+                let back = match lang_before.as_str() {
+                    "en" => 2u32,
+                    "auto" => 0,
+                    _ => 1,
+                };
+                ui2.lang_combo.set_selected(back);
+                ui2.save_btn.emit_clicked();
+
                 // 「刷新」= 重扫设备 + 探测：同一张碟应该保持原样
                 let before = st2.borrow().disc.as_ref().map(|d| d.leadout_lsn);
                 let devs_before = ui2.device_paths.borrow().len();
@@ -275,8 +300,9 @@ fn main() -> glib::ExitCode {
 
                 let lang = ui2.start_btn.label().map(|s| s.to_string());
                 let hdcd_txt = ui2.hdcd_check.label().map(|s| s.to_string());
+                let lang_sel = ui2.lang_combo.selected();
                 println!(
-                    "SELFTEST initial_disabled={initial_disabled} dirty={dirty} saved={saved} clean_after_save={clean} all_off={all_off} all_on={all_on} devices={devices} selected={sel_dev} refresh_ok={refresh_ok} eject_icon={icon_ok} app_icon={app_icon_ok} win_icon={win_icon} row_markup={row_markup} start_btn={btn_w}x{btn_h} req={req_w}x{req_h} min={min_w}x{min_h}/{min_h_v} in_header={btn_in_header} chain={chain:?} eject_classes={eject_classes:?} covers_empty={covers_empty} covers_one={covers_one} covers_all={covers_all} token_dirty={token_dirty} token_saved={token_saved} secrets_mode={secrets_mode} config_has_token={config_has_token} refresh_classes={refresh_classes:?} theme_events={theme_events} theme_combo_ok={combo_ok} root_subtitle={root_subtitle:?} disc_after={after:?} lang={lang:?} hdcd={hdcd_txt:?}"
+                    "SELFTEST initial_disabled={initial_disabled} dirty={dirty} saved={saved} clean_after_save={clean} all_off={all_off} all_on={all_on} devices={devices} selected={sel_dev} refresh_ok={refresh_ok} eject_icon={icon_ok} app_icon={app_icon_ok} win_icon={win_icon} row_markup={row_markup} start_btn={btn_w}x{btn_h} req={req_w}x{req_h} min={min_w}x{min_h}/{min_h_v} in_header={btn_in_header} chain={chain:?} eject_classes={eject_classes:?} covers_empty={covers_empty} covers_one={covers_one} covers_all={covers_all} token_dirty={token_dirty} token_saved={token_saved} secrets_mode={secrets_mode} config_has_token={config_has_token} refresh_classes={refresh_classes:?} theme_events={theme_events} theme_combo_ok={combo_ok} root_subtitle={root_subtitle:?} disc_after={after:?} lang={lang:?} hdcd={hdcd_txt:?} lang_sel={lang_sel} lang_dirty={lang_dirty} lang_saved={lang_saved}"
                 );
                 app2.quit();
                 glib::ControlFlow::Break
