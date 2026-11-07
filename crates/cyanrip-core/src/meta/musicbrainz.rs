@@ -156,28 +156,28 @@ mod tests {
     fn parses_minimal_release_json() {
         let json = r#"{
           "releases": [{
-            "id": "abc", "title": "Quartet", "date": "2001-09-27", "country": "JP",
-            "barcode": "4988005280619",
-            "artist-credit": [{"name": "久石譲"}],
-            "label-info": [{"label": {"name": "Polydor"}, "catalog-number": "UPCH-1105"}],
+            "id": "abc", "title": "Test Album", "date": "2001-09-27", "country": "JP",
+            "barcode": "0000000000000",
+            "artist-credit": [{"name": "Test Artist"}],
+            "label-info": [{"label": {"name": "Test Label"}, "catalog-number": "CAT-001"}],
             "media": [{"tracks": [
-               {"number": "1", "title": "Main Theme", "length": 198133},
-               {"number": "2", "title": "Student Quartet", "length": 209400}
+               {"number": "1", "title": "Track One", "length": 198133},
+               {"number": "2", "title": "Track Two", "length": 209400}
             ]}]
           }]
         }"#;
         let resp: Resp = serde_json::from_str(json).unwrap();
         assert_eq!(resp.releases.len(), 1);
         let r = &resp.releases[0];
-        assert_eq!(r.artist_credit[0].name, "久石譲");
+        assert_eq!(r.artist_credit[0].name, "Test Artist");
         assert_eq!(r.media[0].tracks.len(), 2);
         assert_eq!(r.media[0].tracks[0].length, Some(198133));
     }
 
     const TWO_DISC: &str = r#"{
       "releases": [{
-        "id": "rel-1", "title": "Works for Violin and Orchestra", "date": "1992",
-        "artist-credit": [{"name": "Paganini"}],
+        "id": "rel-1", "title": "Test Set", "date": "1992",
+        "artist-credit": [{"name": "Test Artist"}],
         "media": [
           {"position": 1, "tracks": [
             {"number": "1", "title": "Variazioni", "length": 725000},

@@ -230,13 +230,13 @@ mod tests {
         assert_eq!(t.ar_confidence, Some(5));
     }
 
-    const QUARTET: &str = include_str!("../tests/fixtures/log_quartet.txt");
-    const FLOWER_CD1: &str = include_str!("../tests/fixtures/log_flower_cd1.txt");
-    const FLOWER_CD2: &str = include_str!("../tests/fixtures/log_flower_cd2.txt");
+    const DISC13: &str = include_str!("../tests/fixtures/log_13track.txt");
+    const SET_CD1: &str = include_str!("../tests/fixtures/log_2cd_cd1.txt");
+    const SET_CD2: &str = include_str!("../tests/fixtures/log_2cd_cd2.txt");
 
     #[test]
-    fn parses_quartet_header_and_tracks() {
-        let r = parse_log(QUARTET);
+    fn parses_full_disc_header_and_tracks() {
+        let r = parse_log(DISC13);
         assert_eq!(r.offset, Some(48));
         assert_eq!(r.c2_supported, Some(false));
         assert_eq!(r.disc_tracks, Some(13));
@@ -244,10 +244,10 @@ mod tests {
         assert_eq!(r.tracks_accurate, 13);
         assert_eq!(r.errors, 0);
         assert_eq!(r.total_time.as_deref(), Some("41:22.28"));
-        assert_eq!(r.disc_id.as_deref(), Some("kC9g0ZX9IMTELLEHE.ETxsZyaMg-"));
-        assert_eq!(r.cddb_id.as_deref(), Some("9909B20D"));
-        assert_eq!(r.mcn.as_deref(), Some("4988005280619"));
-        assert_eq!(r.ar_id.as_deref(), Some("001333f2-00bfe5ad-9909b20d"));
+        assert_eq!(r.disc_id.as_deref(), Some("AAAAAAAAAAAAAAAAAAAAAAAAAAA-"));
+        assert_eq!(r.cddb_id.as_deref(), Some("DEADBEEF"));
+        assert_eq!(r.mcn.as_deref(), Some("1234567890123"));
+        assert_eq!(r.ar_id.as_deref(), Some("01234567-89abcdef-01234567"));
         assert_eq!(r.ar_found, Some(true));
         assert_eq!(r.paranoia_level.as_deref(), Some("max"));
         assert!(r.all_accurate());
@@ -264,8 +264,8 @@ mod tests {
     }
 
     #[test]
-    fn flower_cd1_has_one_not_found() {
-        let r = parse_log(FLOWER_CD1);
+    fn second_pressing_has_one_not_found() {
+        let r = parse_log(SET_CD1);
         assert_eq!(r.tracks_ripped, 16);
         assert_eq!(r.tracks_accurate, 15);
         assert_eq!(r.errors, 0);
@@ -275,8 +275,8 @@ mod tests {
     }
 
     #[test]
-    fn flower_cd2_all_accurate() {
-        let r = parse_log(FLOWER_CD2);
+    fn set_cd2_all_accurate() {
+        let r = parse_log(SET_CD2);
         assert_eq!(r.tracks_ripped, 8);
         assert_eq!(r.tracks_accurate, 8);
         assert_eq!(r.errors, 0);
@@ -285,7 +285,7 @@ mod tests {
 
     #[test]
     fn truncated_log_does_not_panic() {
-        let cut: String = QUARTET.lines().take(60).collect::<Vec<_>>().join("\n");
+        let cut: String = DISC13.lines().take(60).collect::<Vec<_>>().join("\n");
         let r = parse_log(&cut);
         assert_eq!(r.offset, Some(48));
         assert!(r.tracks_ripped >= 1);

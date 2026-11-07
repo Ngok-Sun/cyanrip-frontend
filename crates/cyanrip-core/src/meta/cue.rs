@@ -224,16 +224,16 @@ mod tests {
 
     #[test]
     fn parses_cyanrip_style_cue() {
-        let text = r#"PERFORMER "花儿乐队"
+        let text = r#"PERFORMER "Test Artist"
 TITLE "幸福的旁边"
 REM DATE 1999-01-18
 REM DISCNUMBER 2
 REM TOTALDISCS 2
-REM DISCOGS_RELEASE 14540494
+REM DISCOGS_RELEASE 0
 FILE "CD2-01 稻草上的火鸡.flac" WAVE
   TRACK 01 AUDIO
     TITLE "稻草上的火鸡"
-    PERFORMER "花儿乐队"
+    PERFORMER "Test Artist"
     INDEX 01 00:00:00
 FILE "CD2-02 静止.flac" WAVE
   TRACK 02 AUDIO
@@ -241,7 +241,7 @@ FILE "CD2-02 静止.flac" WAVE
 "#;
         let r = parse_str(text, "test.cue");
         assert_eq!(r.source, MetaSource::Cue);
-        assert_eq!(r.artist, "花儿乐队");
+        assert_eq!(r.artist, "Test Artist");
         assert_eq!(r.title, "幸福的旁边");
         assert_eq!(r.date.as_deref(), Some("1999-01-18"));
         assert_eq!(r.disc_number, 2);

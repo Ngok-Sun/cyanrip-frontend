@@ -430,7 +430,7 @@ extra_args = ""
 读偏移    +48 samples
 C2 支持   驱动不支持，依赖多遍比对
 Paranoia  max
-AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
+AccurateRip 数据库中有这张碟 · 01234567-89abcdef-01234567
 精确命中  13/13
 抓轨错误  0
 ─────────────────────────────────────────────
@@ -594,7 +594,7 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 
 1. **core 单测（离线）**
    - `progress.rs`：真实 `\r` 片段 → 事件序列、单调钳制、倍速/ETA
-   - `logparse.rs`：三份真实 log（Quartet 13/13、花儿 CD1 15/16、花儿 CD2 8/8）断言 offset、AR、CRC、错误数
+   - `logparse.rs`：三份真实 log（单碟 13 轨 13/13、套装 CD1 15/16、套装 CD2 8/8）断言 offset、AR、CRC、错误数
    - `config.rs`：默认值、损坏文件回退、secrets 0600
    - `meta/*`：discid 对照真值；MB 套装按 medium 选碟；Discogs position 分碟；CUE 解析/生成往返；GBK 解码
    - `tag.rs`：文件名清理、FLAC 完整性校验
@@ -604,9 +604,9 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
    - `AUTORIP` / `AUTOAPPLY`：界面驱动的单轨抓轨 + 自动归档，与命令行逐位一致
    - `EJECTTEST`：弹出后状态清空、托盘可收回
 3. **真碟验收**（本机）
-   - 久石譲 Quartet（AR 13/13 conf 8）→ 与命令行逐位一致
-   - 花儿乐队 2CD（MB 无压片）→ MCN/Discogs + CUE 兜底
-   - Paganini 双碟套装 → 两台光驱并发，曲目/碟号/目录不串
+   - 13 轨测试碟（AR 13/13 conf 8）→ 与命令行逐位一致
+   - 2CD 套装（MB 无压片）→ MCN/Discogs + CUE 兜底
+   - 双碟套装 → 两台光驱并发，曲目/碟号/目录不串
    - Reference Recordings RR-907CD → HDCD 勾选后 24-bit 输出
 4. **回归**：`cargo test`（core 40 + 集成 2 + GUI 1）+ `clippy --all-targets` 零警告
 
@@ -627,13 +627,13 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 - 进度页（双进度、速度、日志、取消）
 - 结果页（AR 表、CRC、操作按钮）+ 完成提示音（canberra，可关闭）
 - i18n 骨架：所有可见字符串走 `tr()`（msgid 为中文）
-- 验收：真碟（Quartet）界面完成抓轨，结果与命令行一致
+- 验收：真碟（13 轨）界面完成抓轨，结果与命令行一致
 
 ### M3 — 元数据与标签（已完成，2026-11-07）
 
 **实现**
 - `meta::discid`：自行实现 MusicBrainz Disc ID（SHA-1 + libdiscid 的 base64 变体），
-  单测直接对照 cyanrip 日志里的真实 ID `kC9g0ZX9IMTELLEHE.ETxsZyaMg-`
+  单测直接对照 cyanrip 日志里的真实 ID `AAAAAAAAAAAAAAAAAAAAAAAAAAA-`
 - `meta::musicbrainz`：按 discid 查发行版（含曲目时长）
 - `meta::discogs`：按条码搜索、取发行版详情（曲目、厂牌、目录号、封面）；token 依次取
   `CYANRIP_DISCOGS_TOKEN` → 设置里的 `secrets.toml` → 旧的 `~/.config/discogs/token`
@@ -649,13 +649,13 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 - CLI 新增 `match`（列出候选）与 `tag`（写标签归档）
 
 **验收**
-- `cyanrip-cli match`（久石譲 Quartet）：DiscID 与 cyanrip 一致；MB 无此压片（404），
-  走 MCN 条码命中 Discogs `15601039`，13 轨
-- `cyanrip-cli tag`：归档到 `Joe Hisaishi/Quartet (Original Soundtrack)/01 Main Theme.flac`，
-  TITLE/ALBUM/TRACKTOTAL=13/DATE/LABEL/UPCH-1105/BARCODE/DISCOGS_RELEASE 全部正确，
+- `cyanrip-cli match`（13 轨测试碟）：DiscID 与 cyanrip 一致；MB 无此压片（404），
+  走 MCN 条码命中 Discogs `<release id>`，13 轨
+- `cyanrip-cli tag`：归档到 `Artist/Album/01 Main Theme.flac`，
+  TITLE/ALBUM/TRACKTOTAL=13/DATE/LABEL/<catno>/BARCODE/DISCOGS_RELEASE 全部正确，
   ReplayGain 保留，`flac -t` 通过
 - GUI（`CYANRIP_GUI_AUTORIP=1 CYANRIP_GUI_AUTOAPPLY=1`，真机 + 真网络）：
-  `META candidates=1 → applied=/tmp/.../Joe Hisaishi/Quartet (Original Soundtrack)`
+  `META candidates=1 → applied=/tmp/.../Artist/Album`
 - 34 个测试全绿，clippy 0 警告
 
 **抓轨前识别（同日补）**
@@ -684,7 +684,7 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 - `dirs_with_flac` 只统计写完的 FLAC，0 字节文件不再算数
 
 **已知限制**
-- 未识别碟（如花儿 CD2）在 MB 无 discid、无 MCN、无 AcoustID key 时无候选，只能手工补
+- 未识别碟（如套装 CD2）在 MB 无 discid、无 MCN、无 AcoustID key 时无候选，只能手工补
 - 封面优先 Discogs primary 图；MB 候选走 Cover Art Archive
 
 ### M4 — 打磨与扩展（已完成，2026-11-08 验收）
@@ -734,7 +734,7 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 - 读偏移：`+48 samples`（两张碟独立确认，confidence 16 / 13）
 - C2：驱动不支持，校验依赖多遍比对
 - 速度：裸读 14.8x；cyanrip 0.9.2 因 `CDROM_MEDIA_CHANGED` 每帧查询仅 0.8x；0.9.4-rc3 约 1.5–3.8x
-- 一箱参考数据（log fixtures）：Quartet 13 轨/41:22、花儿 CD1 16 轨/46:17、花儿 CD2 8 轨/33:33
+- 一箱参考数据（log fixtures）：13 轨/41:22、套装 CD1 16 轨/46:17、套装 CD2 8 轨/33:33
 
 ### 14.1 GUI 踩坑清单
 
@@ -763,8 +763,8 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
   （当前累计：core 40 + 集成 2 + GUI 1）
 - 真机验证：
   - `probe` 在空仓时正确返回"光驱中没有碟片"，不 panic
-  - `parse-log` 对三份真实日志输出与 cyanrip 原始结果一致（Quartet 13/13、花儿 CD1 15/16、CD2 8/8）
-- 真碟验收（2026-11-07，久石譲 *Quartet*）：
+  - `parse-log` 对三份真实日志输出与 cyanrip 原始结果一致（13/13、15/16、8/8）
+- 真碟验收（2026-11-07，13 轨测试碟）：
   - `probe`：13 轨 / 41:22 / lead-out 186178，与 cyanrip 一致
   - `rip -l 5 -Z 2`：EAC CRC32 `7FF4B823`、AR v2 `539F7C13`（confidence 8），与 cyanrip 完整抓轨逐位相同
   - 修复：`CDROMREADTOCHDR` 常量误写为 0x5302（实为 `CDROMRESUME`，返回 0 且不写缓冲区），已改为 0x5305
@@ -810,15 +810,15 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 ### M3 — 元数据与标签（已完成，2026-11-07）
 
 **实现**
-- `meta::discid`：自行实现 MusicBrainz Disc ID，单测对照真值 `kC9g0ZX9IMTELLEHE.ETxsZyaMg-`
+- `meta::discid`：自行实现 MusicBrainz Disc ID，单测对照真值 `AAAAAAAAAAAAAAAAAAAAAAAAAAA-`
 - `meta::musicbrainz` / `meta::discogs` / `meta::acoustid` / `meta::cue` / `meta::google`
 - `disc::probe` 增加 MCN 读取（`CDROM_GET_MCN`），商业碟的 MCN 往往就是条码
 - `tag`：重命名 + 归档 + `metaflac` 写标签 + 内嵌封面 + `cover.jpg` 落盘
 - GUI：结果页「元数据」区块；CLI：`match` / `tag`
 
 **验收（真碟）**
-- Quartet：MB 无此压片 → MCN 条码命中 Discogs `15601039`，13 轨
-- 归档 `Joe Hisaishi/Quartet (Original Soundtrack)/01 Main Theme.flac`，标签与 ReplayGain 正确，`flac -t` 通过
+- 13 轨测试碟：MB 无此压片 → MCN 条码命中 Discogs `<release id>`，13 轨
+- 归档 `Artist/Album/01 Main Theme.flac`，标签与 ReplayGain 正确，`flac -t` 通过
 - 抓轨前识别（`META candidates=1` 早于 `RIP`），参数里带完整 `-a/-t`
 
 ### M3.5 — 使用反馈驱动的增补（2026-11-07，已完成）
@@ -903,9 +903,9 @@ CUE 导入/导出、封面三级兜底（CAA → Discogs → Google）与内嵌�
 双光驱双实例并行、提示音/通知/关机、中英界面、快捷键。
 
 **验证**（真碟，非模拟）：
-- 花儿乐队《幸福的旁边》CD1/CD2：CD1 15/16、CD2 8/8 命中 AR（第 16 轨该压片未入库），EAC CRC 与 CLI 一致
-- 久石譲《Quartet》13 轨：AR v2 conf 8；元数据/封面/归档全链路
-- 邓丽君《淡淡幽情》12 轨：单轨抓轨进度 99.8%、模板归档、日志随档
+- 2CD 套装CD1/CD2：CD1 15/16、CD2 8/8 命中 AR（第 16 轨该压片未入库），EAC CRC 与 CLI 一致
+- 13 轨测试碟13 轨：AR v2 conf 8；元数据/封面/归档全链路
+- 12 轨测试碟12 轨：单轨抓轨进度 99.8%、模板归档、日志随档
 - 双光驱同时抓两张碟：各自 AR 命中，输出目录按 DiscID 区分
 - HDCD 碟：勾选后 24-bit FLAC，日志确认 `HDCD detected: yes`
 - 测试 53 个全绿，clippy 0 警告

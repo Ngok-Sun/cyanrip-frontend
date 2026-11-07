@@ -14,12 +14,12 @@ Album Art:      none
 Outputs:        flac
 Disc tracks:    13
 Tracks to rip:  all
-DiscID:         kC9g0ZX9IMTELLEHE.ETxsZyaMg-
-CDDB ID:        9909B20D
-Disc MCN:       4988005280619
+DiscID:         AAAAAAAAAAAAAAAAAAAAAAAAAAA-
+CDDB ID:        DEADBEEF
+Disc MCN:       1234567890123
 Album:          Unknown CD 2026-11-05
 Album artist:   Unknown
-AccurateRip ID: 001333f2-00bfe5ad-9909b20d
+AccurateRip ID: 01234567-89abcdef-01234567
 AccurateRip:    found
 AcoustID:       fingerprinting, no user API key to submit with
 Total time:     41:22.28
@@ -69,9 +69,9 @@ Summary:
   Metadata:
     track:                         1
     tracktotal:                    13
-    disc_mcn:                      4988005280619
-    musicbrainz_discid:            kC9g0ZX9IMTELLEHE.ETxsZyaMg-
-    cddb:                          9909B20D
+    disc_mcn:                      1234567890123
+    musicbrainz_discid:            AAAAAAAAAAAAAAAAAAAAAAAAAAA-
+    cddb:                          DEADBEEF
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
     title:                         Unknown track
@@ -129,9 +129,9 @@ Summary:
   Metadata:
     track:                         2
     tracktotal:                    13
-    disc_mcn:                      4988005280619
-    musicbrainz_discid:            kC9g0ZX9IMTELLEHE.ETxsZyaMg-
-    cddb:                          9909B20D
+    disc_mcn:                      1234567890123
+    musicbrainz_discid:            AAAAAAAAAAAAAAAAAAAAAAAAAAA-
+    cddb:                          DEADBEEF
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
     title:                         Unknown track
@@ -189,9 +189,9 @@ Summary:
   Metadata:
     track:                         3
     tracktotal:                    13
-    disc_mcn:                      4988005280619
-    musicbrainz_discid:            kC9g0ZX9IMTELLEHE.ETxsZyaMg-
-    cddb:                          9909B20D
+    disc_mcn:                      1234567890123
+    musicbrainz_discid:            AAAAAAAAAAAAAAAAAAAAAAAAAAA-
+    cddb:                          DEADBEEF
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
     title:                         Unknown track
@@ -249,9 +249,9 @@ Summary:
   Metadata:
     track:                         4
     tracktotal:                    13
-    disc_mcn:                      4988005280619
-    musicbrainz_discid:            kC9g0ZX9IMTELLEHE.ETxsZyaMg-
-    cddb:                          9909B20D
+    disc_mcn:                      1234567890123
+    musicbrainz_discid:            AAAAAAAAAAAAAAAAAAAAAAAAAAA-
+    cddb:                          DEADBEEF
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
     title:                         Unknown track
@@ -309,9 +309,9 @@ Summary:
   Metadata:
     track:                         5
     tracktotal:                    13
-    disc_mcn:                      4988005280619
-    musicbrainz_discid:            kC9g0ZX9IMTELLEHE.ETxsZyaMg-
-    cddb:                          9909B20D
+    disc_mcn:                      1234567890123
+    musicbrainz_discid:            AAAAAAAAAAAAAAAAAAAAAAAAAAA-
+    cddb:                          DEADBEEF
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
     title:                         Unknown track
@@ -369,9 +369,9 @@ Summary:
   Metadata:
     track:                         6
     tracktotal:                    13
-    disc_mcn:                      4988005280619
-    musicbrainz_discid:            kC9g0ZX9IMTELLEHE.ETxsZyaMg-
-    cddb:                          9909B20D
+    disc_mcn:                      1234567890123
+    musicbrainz_discid:            AAAAAAAAAAAAAAAAAAAAAAAAAAA-
+    cddb:                          DEADBEEF
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
     title:                         Unknown track
@@ -429,9 +429,9 @@ Summary:
   Metadata:
     track:                         7
     tracktotal:                    13
-    disc_mcn:                      4988005280619
-    musicbrainz_discid:            kC9g0ZX9IMTELLEHE.ETxsZyaMg-
-    cddb:                          9909B20D
+    disc_mcn:                      1234567890123
+    musicbrainz_discid:            AAAAAAAAAAAAAAAAAAAAAAAAAAA-
+    cddb:                          DEADBEEF
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
     title:                         Unknown track
@@ -489,9 +489,9 @@ Summary:
   Metadata:
     track:                         8
     tracktotal:                    13
-    disc_mcn:                      4988005280619
-    musicbrainz_discid:            kC9g0ZX9IMTELLEHE.ETxsZyaMg-
-    cddb:                          9909B20D
+    disc_mcn:                      1234567890123
+    musicbrainz_discid:            AAAAAAAAAAAAAAAAAAAAAAAAAAA-
+    cddb:                          DEADBEEF
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
     title:                         Unknown track
@@ -549,9 +549,9 @@ Summary:
   Metadata:
     track:                         9
     tracktotal:                    13
-    disc_mcn:                      4988005280619
-    musicbrainz_discid:            kC9g0ZX9IMTELLEHE.ETxsZyaMg-
-    cddb:                          9909B20D
+    disc_mcn:                      1234567890123
+    musicbrainz_discid:            AAAAAAAAAAAAAAAAAAAAAAAAAAA-
+    cddb:                          DEADBEEF
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
     title:                         Unknown track
@@ -609,9 +609,9 @@ Summary:
   Metadata:
     track:                         10
     tracktotal:                    13
-    disc_mcn:                      4988005280619
-    musicbrainz_discid:            kC9g0ZX9IMTELLEHE.ETxsZyaMg-
-    cddb:                          9909B20D
+    disc_mcn:                      1234567890123
+    musicbrainz_discid:            AAAAAAAAAAAAAAAAAAAAAAAAAAA-
+    cddb:                          DEADBEEF
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
     title:                         Unknown track
@@ -669,9 +669,9 @@ Summary:
   Metadata:
     track:                         11
     tracktotal:                    13
-    disc_mcn:                      4988005280619
-    musicbrainz_discid:            kC9g0ZX9IMTELLEHE.ETxsZyaMg-
-    cddb:                          9909B20D
+    disc_mcn:                      1234567890123
+    musicbrainz_discid:            AAAAAAAAAAAAAAAAAAAAAAAAAAA-
+    cddb:                          DEADBEEF
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
     title:                         Unknown track
@@ -729,9 +729,9 @@ Summary:
   Metadata:
     track:                         12
     tracktotal:                    13
-    disc_mcn:                      4988005280619
-    musicbrainz_discid:            kC9g0ZX9IMTELLEHE.ETxsZyaMg-
-    cddb:                          9909B20D
+    disc_mcn:                      1234567890123
+    musicbrainz_discid:            AAAAAAAAAAAAAAAAAAAAAAAAAAA-
+    cddb:                          DEADBEEF
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
     title:                         Unknown track
@@ -790,9 +790,9 @@ Summary:
   Metadata:
     track:                         13
     tracktotal:                    13
-    disc_mcn:                      4988005280619
-    musicbrainz_discid:            kC9g0ZX9IMTELLEHE.ETxsZyaMg-
-    cddb:                          9909B20D
+    disc_mcn:                      1234567890123
+    musicbrainz_discid:            AAAAAAAAAAAAAAAAAAAAAAAAAAA-
+    cddb:                          DEADBEEF
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
     title:                         Unknown track

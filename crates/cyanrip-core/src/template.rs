@@ -82,8 +82,8 @@ mod tests {
 
     fn ctx<'a>() -> Ctx<'a> {
         Ctx {
-            artist: "久石譲",
-            album: "Quartet",
+            artist: "测试艺人",
+            album: "Test Album",
             year: "2001",
             title: "Main Theme",
             track: 3,
@@ -96,9 +96,9 @@ mod tests {
     #[test]
     fn renders_dir_and_file() {
         let c = ctx();
-        assert_eq!(render("{artist}/{album}", &c), "久石譲/Quartet");
+        assert_eq!(render("{artist}/{album}", &c), "测试艺人/Test Album");
         assert_eq!(render("{track:02} {title}", &c), "03 Main Theme");
-        assert_eq!(render("{year} - {album}", &c), "2001 - Quartet");
+        assert_eq!(render("{year} - {album}", &c), "2001 - Test Album");
         assert_eq!(render("CD{disc}/{track:03}", &c), "CD2/003");
     }
 
@@ -114,7 +114,7 @@ mod tests {
     #[test]
     fn keeps_unknown_tokens() {
         let c = ctx();
-        assert_eq!(render("{bogus}/{album}", &c), "{bogus}/Quartet");
+        assert_eq!(render("{bogus}/{album}", &c), "{bogus}/Test Album");
     }
 
     #[test]

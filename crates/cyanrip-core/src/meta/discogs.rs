@@ -328,7 +328,7 @@ mod tests {
     #[test]
     fn urlencodes_spaces_and_unicode() {
         assert_eq!(urlencode("a b"), "a%20b");
-        assert_eq!(urlencode("久石譲"), "%E4%B9%85%E7%9F%B3%E8%AD%B2");
+        assert_eq!(urlencode("中文"), "%E4%B8%AD%E6%96%87");
     }
 
     #[test]

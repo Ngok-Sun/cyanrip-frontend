@@ -14,7 +14,7 @@ Album Art:      none
 Outputs:        flac
 Disc tracks:    16
 Tracks to rip:  all
-DiscID:         iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+DiscID:         CCCCCCCCCCCCCCCCCCCCCCCCCCC-
 CDDB ID:        CE0AD910
 Album:          Unknown CD 2026-11-04
 Album artist:   Unknown
@@ -68,7 +68,7 @@ Summary:
   Metadata:
     track:                         1
     tracktotal:                    16
-    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    musicbrainz_discid:            CCCCCCCCCCCCCCCCCCCCCCCCCCC-
     cddb:                          CE0AD910
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
@@ -127,7 +127,7 @@ Summary:
   Metadata:
     track:                         2
     tracktotal:                    16
-    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    musicbrainz_discid:            CCCCCCCCCCCCCCCCCCCCCCCCCCC-
     cddb:                          CE0AD910
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
@@ -186,7 +186,7 @@ Summary:
   Metadata:
     track:                         3
     tracktotal:                    16
-    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    musicbrainz_discid:            CCCCCCCCCCCCCCCCCCCCCCCCCCC-
     cddb:                          CE0AD910
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
@@ -245,7 +245,7 @@ Summary:
   Metadata:
     track:                         4
     tracktotal:                    16
-    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    musicbrainz_discid:            CCCCCCCCCCCCCCCCCCCCCCCCCCC-
     cddb:                          CE0AD910
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
@@ -304,7 +304,7 @@ Summary:
   Metadata:
     track:                         5
     tracktotal:                    16
-    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    musicbrainz_discid:            CCCCCCCCCCCCCCCCCCCCCCCCCCC-
     cddb:                          CE0AD910
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
@@ -363,7 +363,7 @@ Summary:
   Metadata:
     track:                         6
     tracktotal:                    16
-    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    musicbrainz_discid:            CCCCCCCCCCCCCCCCCCCCCCCCCCC-
     cddb:                          CE0AD910
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
@@ -422,7 +422,7 @@ Summary:
   Metadata:
     track:                         7
     tracktotal:                    16
-    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    musicbrainz_discid:            CCCCCCCCCCCCCCCCCCCCCCCCCCC-
     cddb:                          CE0AD910
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
@@ -481,7 +481,7 @@ Summary:
   Metadata:
     track:                         8
     tracktotal:                    16
-    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    musicbrainz_discid:            CCCCCCCCCCCCCCCCCCCCCCCCCCC-
     cddb:                          CE0AD910
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
@@ -540,7 +540,7 @@ Summary:
   Metadata:
     track:                         9
     tracktotal:                    16
-    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    musicbrainz_discid:            CCCCCCCCCCCCCCCCCCCCCCCCCCC-
     cddb:                          CE0AD910
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
@@ -599,7 +599,7 @@ Summary:
   Metadata:
     track:                         10
     tracktotal:                    16
-    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    musicbrainz_discid:            CCCCCCCCCCCCCCCCCCCCCCCCCCC-
     cddb:                          CE0AD910
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
@@ -658,7 +658,7 @@ Summary:
   Metadata:
     track:                         11
     tracktotal:                    16
-    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    musicbrainz_discid:            CCCCCCCCCCCCCCCCCCCCCCCCCCC-
     cddb:                          CE0AD910
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
@@ -717,7 +717,7 @@ Summary:
   Metadata:
     track:                         12
     tracktotal:                    16
-    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    musicbrainz_discid:            CCCCCCCCCCCCCCCCCCCCCCCCCCC-
     cddb:                          CE0AD910
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
@@ -776,7 +776,7 @@ Summary:
   Metadata:
     track:                         13
     tracktotal:                    16
-    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    musicbrainz_discid:            CCCCCCCCCCCCCCCCCCCCCCCCCCC-
     cddb:                          CE0AD910
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
@@ -835,7 +835,7 @@ Summary:
   Metadata:
     track:                         14
     tracktotal:                    16
-    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    musicbrainz_discid:            CCCCCCCCCCCCCCCCCCCCCCCCCCC-
     cddb:                          CE0AD910
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
@@ -894,7 +894,7 @@ Summary:
   Metadata:
     track:                         15
     tracktotal:                    16
-    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    musicbrainz_discid:            CCCCCCCCCCCCCCCCCCCCCCCCCCC-
     cddb:                          CE0AD910
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
@@ -955,7 +955,7 @@ Summary:
   Metadata:
     track:                         16
     tracktotal:                    16
-    musicbrainz_discid:            iwEOqbg8YU0lB0Mu8LNiCpXAuEY-
+    musicbrainz_discid:            CCCCCCCCCCCCCCCCCCCCCCCCCCC-
     cddb:                          CE0AD910
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3

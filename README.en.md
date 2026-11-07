@@ -138,7 +138,7 @@ po/update.sh          # xgettext → msgmerge → msgfmt → install .mo
 
 ```bash
 cargo run -p cyanrip-cli -- probe --device /dev/sr0
-cargo run -p cyanrip-cli -- parse-log crates/cyanrip-core/tests/fixtures/log_quartet.txt
+cargo run -p cyanrip-cli -- parse-log crates/cyanrip-core/tests/fixtures/log_13track.txt
 cargo run -p cyanrip-cli -- rip --device /dev/sr0 --offset 48 -- -Z 2 -P 3 -o flac -N
 cargo run -p cyanrip-cli -- match --device /dev/sr0 --json
 cargo run -p cyanrip-cli -- tag --dir <rip dir> --root ~/Music
@@ -146,11 +146,11 @@ cargo run -p cyanrip-cli -- tag --dir <rip dir> --root ~/Music
 
 ## Verified on hardware
 
-- Three real log fixtures (Joe Hisaishi *Quartet* 13/13, 花儿乐队 CD1 15/16, CD2 8/8) parse
+- Three real log fixtures (a 13-track disc 13/13, a 2-CD set CD1 15/16 and CD2 8/8) parse
   identically to cyanrip's own output.
 - Fake-cyanrip streaming test: progress, `TrackStarted`, `TrackDone`, `RipFinished`.
 - Cancel path: the child process is terminated within 300 ms and `Cancelled` is emitted.
-- **Real disc** (Joe Hisaishi *Quartet*, PIONEER DVR-106D, offset +48):
+- **Real disc** (13-track disc, PIONEER DVR-106D, offset +48):
   `probe` reports 13 tracks / 41:22 / lead-out 186178; `rip -l 5 -Z 2` yields
   `EAC CRC32 7FF4B823`, `AR v2 539F7C13 (confidence 8)` — bit-identical to a full cyanrip run.
 - Dual-drive concurrent rip: both discs finished, both AccurateRip-verified, outputs separated by

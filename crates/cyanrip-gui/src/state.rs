@@ -193,7 +193,7 @@ mod tests {
         // 大量三字节字符：按字节截断很容易落在字符中间
         let mut s = String::new();
         for i in 0..40_000 {
-            s.push_str(&format!("第{i}轨：久石譲 Quartet\n"));
+            s.push_str(&format!("第{i}轨：测试曲名 A\n"));
         }
         let before = s.len();
         trim_log_tail(&mut s, 512 * 1024, 256 * 1024);

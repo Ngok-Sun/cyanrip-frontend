@@ -120,7 +120,7 @@ po/update.sh          # 重新提取 msgid + 合并 + 编译 + 安装 .mo
 cargo run -p cyanrip-cli -- probe --device /dev/sr0
 
 # 解析已有的 EAC 风格日志
-cargo run -p cyanrip-cli -- parse-log tests/fixtures/log_quartet.txt
+cargo run -p cyanrip-cli -- parse-log tests/fixtures/log_13track.txt
 
 # 抓轨（透传 cyanrip 参数）
 cargo run -p cyanrip-cli -- rip --device /dev/sr0 --offset 48 -- -Z 2 -P 3 -o flac -N
@@ -128,10 +128,10 @@ cargo run -p cyanrip-cli -- rip --device /dev/sr0 --offset 48 -- -Z 2 -P 3 -o fl
 
 ## 已验证
 
-- 三份真实日志 fixture（久石譲 *Quartet* 13/13、花儿乐队 CD1 15/16、CD2 8/8）解析结果与 cyanrip 输出一致
+- 三份真实日志 fixture（单碟 13 轨 13/13、套装 CD1 15/16、CD2 8/8）解析结果与 cyanrip 输出一致
 - 假 cyanrip 脚本驱动的流式事件：进度、TrackStarted、TrackDone、RipFinished
 - 取消路径：`watch` 通道触发后 300ms 内终止子进程并返回 `Cancelled`
-- **真碟**（久石譲 *Quartet*，PIONEER DVR-106D，offset +48）：
+- **真碟**（13 轨测试碟，PIONEER DVR-106D，offset +48）：
   - `probe` 读出 13 轨 / 41:22 / lead-out 186178，与 cyanrip 日志一致
   - `rip -l 5 -Z 2` 产出 `EAC CRC32 7FF4B823`、`AR v2 539F7C13 (confidence 8)`，与之前 cyanrip 完整抓轨的结果逐位相同
   - `-Z 2` 三遍读取时总进度单调递增，倍速读数 1.8–3.4x

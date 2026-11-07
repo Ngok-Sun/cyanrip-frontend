@@ -14,10 +14,10 @@ Album Art:      none
 Outputs:        flac
 Disc tracks:    8
 Tracks to rip:  all
-DiscID:         e4XoHQVcfQ8TTl8VtfQSPs.nyPo-
+DiscID:         BBBBBBBBBBBBBBBBBBBBBBBBBBB-
 CDDB ID:        6B07DD08
 Album:          幸福的旁边
-Album artist:   花儿乐队
+Album artist:   Test Artist
 AccurateRip ID: 0009ee1c-0043a9e6-6b07dd08
 AccurateRip:    found
 AcoustID:       fingerprinting, no user API key to submit with
@@ -68,14 +68,14 @@ Summary:
   Metadata:
     track:                         1
     tracktotal:                    8
-    musicbrainz_discid:            e4XoHQVcfQ8TTl8VtfQSPs.nyPo-
+    musicbrainz_discid:            BBBBBBBBBBBBBBBBBBBBBBBBBBB-
     cddb:                          6B07DD08
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
     title:                         Unknown track
     album:                         幸福的旁边
-    album_artist:                  花儿乐队
-    artist:                        花儿乐队
+    album_artist:                  Test Artist
+    artist:                        Test Artist
     creation_time:                 2026-11-05T20:21:12
     REPLAYGAIN_TRACK_GAIN:         -5.70 dB
     R128_TRACK_GAIN:               -180
@@ -127,14 +127,14 @@ Summary:
   Metadata:
     track:                         2
     tracktotal:                    8
-    musicbrainz_discid:            e4XoHQVcfQ8TTl8VtfQSPs.nyPo-
+    musicbrainz_discid:            BBBBBBBBBBBBBBBBBBBBBBBBBBB-
     cddb:                          6B07DD08
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
     title:                         Unknown track
     album:                         幸福的旁边
-    album_artist:                  花儿乐队
-    artist:                        花儿乐队
+    album_artist:                  Test Artist
+    artist:                        Test Artist
     creation_time:                 2026-11-05T20:23:06
     REPLAYGAIN_TRACK_GAIN:         -6.00 dB
     R128_TRACK_GAIN:               -255
@@ -186,14 +186,14 @@ Summary:
   Metadata:
     track:                         3
     tracktotal:                    8
-    musicbrainz_discid:            e4XoHQVcfQ8TTl8VtfQSPs.nyPo-
+    musicbrainz_discid:            BBBBBBBBBBBBBBBBBBBBBBBBBBB-
     cddb:                          6B07DD08
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
     title:                         Unknown track
     album:                         幸福的旁边
-    album_artist:                  花儿乐队
-    artist:                        花儿乐队
+    album_artist:                  Test Artist
+    artist:                        Test Artist
     creation_time:                 2026-11-05T20:25:15
     REPLAYGAIN_TRACK_GAIN:         -4.83 dB
     R128_TRACK_GAIN:               45
@@ -245,14 +245,14 @@ Summary:
   Metadata:
     track:                         4
     tracktotal:                    8
-    musicbrainz_discid:            e4XoHQVcfQ8TTl8VtfQSPs.nyPo-
+    musicbrainz_discid:            BBBBBBBBBBBBBBBBBBBBBBBBBBB-
     cddb:                          6B07DD08
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
     title:                         Unknown track
     album:                         幸福的旁边
-    album_artist:                  花儿乐队
-    artist:                        花儿乐队
+    album_artist:                  Test Artist
+    artist:                        Test Artist
     creation_time:                 2026-11-05T20:26:07
     REPLAYGAIN_TRACK_GAIN:         -6.09 dB
     R128_TRACK_GAIN:               -278
@@ -304,14 +304,14 @@ Summary:
   Metadata:
     track:                         5
     tracktotal:                    8
-    musicbrainz_discid:            e4XoHQVcfQ8TTl8VtfQSPs.nyPo-
+    musicbrainz_discid:            BBBBBBBBBBBBBBBBBBBBBBBBBBB-
     cddb:                          6B07DD08
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
     title:                         Unknown track
     album:                         幸福的旁边
-    album_artist:                  花儿乐队
-    artist:                        花儿乐队
+    album_artist:                  Test Artist
+    artist:                        Test Artist
     creation_time:                 2026-11-05T20:27:41
     REPLAYGAIN_TRACK_GAIN:         -6.84 dB
     R128_TRACK_GAIN:               -470
@@ -363,14 +363,14 @@ Summary:
   Metadata:
     track:                         6
     tracktotal:                    8
-    musicbrainz_discid:            e4XoHQVcfQ8TTl8VtfQSPs.nyPo-
+    musicbrainz_discid:            BBBBBBBBBBBBBBBBBBBBBBBBBBB-
     cddb:                          6B07DD08
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
     title:                         Unknown track
     album:                         幸福的旁边
-    album_artist:                  花儿乐队
-    artist:                        花儿乐队
+    album_artist:                  Test Artist
+    artist:                        Test Artist
     creation_time:                 2026-11-05T20:30:46
     REPLAYGAIN_TRACK_GAIN:         -8.41 dB
     R128_TRACK_GAIN:               -874
@@ -422,14 +422,14 @@ Summary:
   Metadata:
     track:                         7
     tracktotal:                    8
-    musicbrainz_discid:            e4XoHQVcfQ8TTl8VtfQSPs.nyPo-
+    musicbrainz_discid:            BBBBBBBBBBBBBBBBBBBBBBBBBBB-
     cddb:                          6B07DD08
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
     title:                         Unknown track
     album:                         幸福的旁边
-    album_artist:                  花儿乐队
-    artist:                        花儿乐队
+    album_artist:                  Test Artist
+    artist:                        Test Artist
     creation_time:                 2026-11-05T20:33:34
     REPLAYGAIN_TRACK_GAIN:         -2.54 dB
     R128_TRACK_GAIN:               630
@@ -482,14 +482,14 @@ Summary:
   Metadata:
     track:                         8
     tracktotal:                    8
-    musicbrainz_discid:            e4XoHQVcfQ8TTl8VtfQSPs.nyPo-
+    musicbrainz_discid:            BBBBBBBBBBBBBBBBBBBBBBBBBBB-
     cddb:                          6B07DD08
     media:                         CD
     comment:                       cyanrip 0.9.4-rc3
     title:                         Unknown track
     album:                         幸福的旁边
-    album_artist:                  花儿乐队
-    artist:                        花儿乐队
+    album_artist:                  Test Artist
+    artist:                        Test Artist
     creation_time:                 2026-11-05T20:35:02
     REPLAYGAIN_TRACK_GAIN:         -3.28 dB
     R128_TRACK_GAIN:               441
