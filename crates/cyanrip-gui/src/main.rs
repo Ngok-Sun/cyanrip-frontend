@@ -155,8 +155,12 @@ fn main() -> glib::ExitCode {
                 let all_on = st2.borrow().selected.iter().all(|x| *x);
 
                 // Discogs token：改成掩码输入行，保存后应落到 secrets.toml（0600）
-                ui2.discogs_row.set_text("tok-test-123");
-                let token_dirty = st2.borrow().secrets.discogs_token == "tok-test-123";
+                // 只在临时 profile 下测，避免污染用户真实密钥
+                if std::env::var("CYANRIP_GUI_CONFIG").is_ok() {
+                    ui2.discogs_row.set_text("tok-test-123");
+                }
+                let token_dirty = std::env::var("CYANRIP_GUI_CONFIG").is_err()
+                    || st2.borrow().secrets.discogs_token == "tok-test-123";
 
                 let original = st2.borrow().settings.rip.verify_passes;
                 let initial_disabled = !ui2.save_btn.is_sensitive();

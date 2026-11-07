@@ -99,14 +99,22 @@ fn effective_token() -> Option<String> {
 }
 
 fn get_json<T: for<'de> Deserialize<'de>>(url: &str) -> Result<T> {
+    let token = effective_token();
     let mut req = ureq::get(url).set("User-Agent", UA);
-    if let Some(token) = effective_token() {
-        req = req.set("Authorization", &format!("Discogs token={token}"));
+    if let Some(t) = token.as_deref() {
+        req = req.set("Authorization", &format!("Discogs token={t}"));
     }
-    req.call()
-        .with_context(|| format!("Discogs 请求失败：{url}"))?
-        .into_json()
-        .context("Discogs 返回解析失败")
+    let first = req.call();
+    // token 失效（401）时退回匿名请求：搜索/详情接口本身允许无鉴权
+    let resp = match first {
+        Ok(r) => r,
+        Err(ureq::Error::Status(401, _)) if token.is_some() => ureq::get(url)
+            .set("User-Agent", UA)
+            .call()
+            .with_context(|| format!("Discogs 请求失败（匿名重试）：{url}"))?,
+        Err(e) => return Err(e).with_context(|| format!("Discogs 请求失败：{url}")),
+    };
+    resp.into_json().context("Discogs 返回解析失败")
 }
 
 /// 按关键字（艺人 / 专辑 / 条码）搜索。
