@@ -6,28 +6,28 @@
       <stop offset="1" stop-color="#1a5fb4"/>
     </linearGradient>
     <linearGradient id="disc" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#f8f7f6"/>
-      <stop offset="0.45" stop-color="#dad8d5"/>
-      <stop offset="0.55" stop-color="#b8b5b2"/>
-      <stop offset="1" stop-color="#e8e6e4"/>
+      <stop offset="0" stop-color="#fbfaf9"/>
+      <stop offset="0.4" stop-color="#e2e0dd"/>
+      <stop offset="0.6" stop-color="#c3c0bd"/>
+      <stop offset="1" stop-color="#ecebe9"/>
     </linearGradient>
   </defs>
 
   <!-- 圆角底板 -->
   <rect x="4" y="4" width="120" height="120" rx="26" fill="url(#bg)"/>
 
-  <!-- CD -->
-  <circle cx="64" cy="44" r="28" fill="url(#disc)"/>
-  <circle cx="64" cy="44" r="28" fill="none" stroke="#123d73" stroke-width="2.5"/>
-  <path d="M 42 29 A 26 26 0 0 1 86 29" fill="none" stroke="#ffffff"
-        stroke-opacity="0.8" stroke-width="4" stroke-linecap="round"/>
-  <circle cx="64" cy="44" r="7" fill="#1a5fb4"/>
-  <circle cx="64" cy="44" r="7" fill="none" stroke="#ffffff" stroke-opacity="0.55"
+  <!-- CD：更大、整体居中 -->
+  <circle cx="64" cy="64" r="40" fill="url(#disc)"/>
+  <circle cx="64" cy="64" r="40" fill="none" stroke="#123d73" stroke-width="2.5"/>
+  <path d="M 36 42 A 36 36 0 0 1 92 42" fill="none" stroke="#ffffff"
+        stroke-opacity="0.85" stroke-width="4.5" stroke-linecap="round"/>
+  <circle cx="64" cy="64" r="6.5" fill="#1a5fb4"/>
+  <circle cx="64" cy="64" r="6.5" fill="none" stroke="#ffffff" stroke-opacity="0.6"
           stroke-width="1.6"/>
 
-  <!-- RIP -->
-  <text x="64" y="108" text-anchor="middle"
+  <!-- RIP：叠在盘面下半部 -->
+  <text x="64" y="92" text-anchor="middle"
         font-family="DejaVu Sans, Liberation Sans, Cantarell, sans-serif"
-        font-size="34" font-weight="bold" letter-spacing="1.5"
-        fill="#ffffff">RIP</text>
+        font-size="26" font-weight="bold" letter-spacing="2"
+        fill="#55595e">RIP</text>
 </svg>
