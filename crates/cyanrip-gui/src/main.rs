@@ -133,8 +133,17 @@ fn main() -> glib::ExitCode {
                 ui2.verify_spin.set_value(original as f64);
                 ui2.save_btn.emit_clicked();
                 let clean = !st2.borrow().dirty && !ui2.save_btn.is_sensitive();
+
+                // 「刷新」= 重扫设备 + 探测：同一张碟应该保持原样
+                let before = st2.borrow().disc.as_ref().map(|d| d.leadout_lsn);
+                let devs_before = ui2.device_paths.borrow().len();
+                ui2.rescan_btn.emit_clicked();
+                let after = st2.borrow().disc.as_ref().map(|d| d.leadout_lsn);
+                let devs_after = ui2.device_paths.borrow().len();
+                let refresh_ok = before == after && devs_before == devs_after;
+
                 println!(
-                    "SELFTEST initial_disabled={initial_disabled} dirty={dirty} saved={saved} clean_after_save={clean} all_off={all_off} all_on={all_on} devices={devices} selected={sel_dev}"
+                    "SELFTEST initial_disabled={initial_disabled} dirty={dirty} saved={saved} clean_after_save={clean} all_off={all_off} all_on={all_on} devices={devices} selected={sel_dev} refresh_ok={refresh_ok} disc_after={after:?}"
                 );
                 app2.quit();
                 glib::ControlFlow::Break

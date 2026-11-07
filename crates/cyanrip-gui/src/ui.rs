@@ -38,7 +38,6 @@ pub struct Ui {
     pub device_dropdown: gtk::DropDown,
     pub device_paths: RefCell<Vec<String>>,
     pub rescan_btn: gtk::Button,
-    pub probe_btn: gtk::Button,
     pub eject_btn: gtk::Button,
     pub syncing_device: RefCell<bool>,
     pub last_media: RefCell<cyanrip_core::disc::MediaStatus>,
@@ -117,8 +116,9 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
     if let Some(idx) = paths.iter().position(|p| p == &state.borrow().device) {
         device_dropdown.set_selected(idx as u32);
     }
-    let rescan_btn = gtk::Button::with_label(&tr("重新扫描"));
-    let probe_btn = gtk::Button::with_label(&tr("探测"));
+    // 一个按钮做完整刷新：重扫 /dev/sr* → 选中项读 TOC → 自动识别元数据
+    let rescan_btn = gtk::Button::with_label(&tr("刷新"));
+    rescan_btn.set_tooltip_text(Some(&tr("重新扫描光驱并读取当前碟片")));
     let eject_btn = gtk::Button::with_label(&tr("弹出"));
     eject_btn.set_tooltip_text(Some(&tr("弹出光驱托盘")));
     let detect_btn = gtk::Button::with_label(&tr("测定偏移"));
@@ -130,7 +130,6 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
     device_box.append(&gtk::Label::new(Some(&tr("设备"))));
     device_box.append(&device_dropdown);
     device_box.append(&rescan_btn);
-    device_box.append(&probe_btn);
     device_box.append(&eject_btn);
     device_box.append(&gtk::Label::new(Some(&tr("偏移"))));
     device_box.append(&offset_spin);
@@ -311,7 +310,6 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
         device_dropdown,
         device_paths: RefCell::new(paths),
         rescan_btn,
-        probe_btn,
         eject_btn,
         syncing_device: RefCell::new(false),
         last_media: RefCell::new(cyanrip_core::disc::MediaStatus::Unknown),
@@ -540,12 +538,6 @@ fn build_settings_page(state: &Rc<RefCell<AppState>>) -> SettingsWidgets {
 }
 
 fn connect_signals(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
-    // 探测
-    {
-        let ui2 = ui.clone();
-        let st = state.clone();
-        ui.probe_btn.connect_clicked(move |_| probe_disc(&ui2, &st));
-    }
     {
         let ui2 = ui.clone();
         let st = state.clone();
@@ -590,8 +582,10 @@ fn connect_signals(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
     {
         let ui2 = ui.clone();
         let st = state.clone();
-        ui.rescan_btn
-            .connect_clicked(move |_| rescan_devices(&ui2, &st));
+        ui.rescan_btn.connect_clicked(move |_| {
+            rescan_devices(&ui2, &st);
+            probe_disc(&ui2, &st);
+        });
     }
     // 偏移变化 → 记到配置
     {
@@ -900,8 +894,18 @@ pub fn probe_disc(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
             state.borrow_mut().disc = None;
             refresh_disc(ui, state);
             ui.start_btn.set_sensitive(false);
-            ui.toast
-                .add_toast(adw::Toast::new(&format!("{}: {e}", tr("探测失败"))));
+            let empty = !matches!(
+                disc::media_status(Path::new(&device)),
+                cyanrip_core::disc::MediaStatus::Ok
+            );
+            if empty {
+                // 只是没放碟 / 托盘开着：更新状态即可，不用弹错误
+                ui.disc_summary.set_text(&tr("没有碟片"));
+                ui.meta_label.set_text(&tr("未识别 · 没有碟片"));
+            } else {
+                ui.toast
+                    .add_toast(adw::Toast::new(&format!("{}: {e}", tr("探测失败"))));
+            }
         }
     }
 }
@@ -1025,12 +1029,6 @@ fn rescan_devices(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
     ui.device_dropdown.set_selected(idx as u32);
     *ui.syncing_device.borrow_mut() = false;
     state.borrow_mut().device = current.clone();
-    ui.toast.add_toast(adw::Toast::new(&format!(
-        "{} {}",
-        tr("扫描到"),
-        ui.device_paths.borrow().len()
-    )));
-    let _ = state;
 }
 
 /// 根据逐轨勾选情况同步"全选"三态。
