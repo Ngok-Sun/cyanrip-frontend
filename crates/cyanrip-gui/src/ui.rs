@@ -29,6 +29,7 @@ pub struct Ui {
     pub device_paths: RefCell<Vec<String>>,
     pub rescan_btn: gtk::Button,
     pub probe_btn: gtk::Button,
+    pub eject_btn: gtk::Button,
     pub syncing_device: RefCell<bool>,
     pub detect_btn: gtk::Button,
     pub offset_spin: gtk::SpinButton,
@@ -100,6 +101,8 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
     }
     let rescan_btn = gtk::Button::with_label(&tr("重新扫描"));
     let probe_btn = gtk::Button::with_label(&tr("探测"));
+    let eject_btn = gtk::Button::with_label(&tr("弹出"));
+    eject_btn.set_tooltip_text(Some(&tr("弹出光驱托盘")));
     let detect_btn = gtk::Button::with_label(&tr("测定偏移"));
     let offset_spin = gtk::SpinButton::with_range(-2000.0, 2000.0, 1.0);
     offset_spin.set_value(state.borrow().offset() as f64);
@@ -110,6 +113,7 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
     device_box.append(&device_dropdown);
     device_box.append(&rescan_btn);
     device_box.append(&probe_btn);
+    device_box.append(&eject_btn);
     device_box.append(&gtk::Label::new(Some(&tr("偏移"))));
     device_box.append(&offset_spin);
     device_box.append(&detect_btn);
@@ -258,6 +262,7 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
         device_paths: RefCell::new(paths),
         rescan_btn,
         probe_btn,
+        eject_btn,
         syncing_device: RefCell::new(false),
         detect_btn,
         offset_spin,
@@ -496,6 +501,29 @@ fn connect_signals(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
                 return;
             }
             probe_disc(&ui2, &st);
+        });
+    }
+    // 弹出托盘
+    {
+        let ui2 = ui.clone();
+        let st = state.clone();
+        ui.eject_btn.connect_clicked(move |_| {
+            let device = selected_device(&ui2);
+            match disc::eject(Path::new(&device)) {
+                Ok(()) => {
+                    {
+                        let mut s = st.borrow_mut();
+                        s.disc = None;
+                        s.selected.clear();
+                    }
+                    refresh_disc(&ui2, &st);
+                    ui2.start_btn.set_sensitive(false);
+                    ui2.toast.add_toast(adw::Toast::new(&tr("托盘已弹出")));
+                }
+                Err(e) => ui2
+                    .toast
+                    .add_toast(adw::Toast::new(&format!("{}: {e}", tr("弹出失败")))),
+            }
         });
     }
     // 重新扫描设备

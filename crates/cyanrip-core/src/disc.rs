@@ -17,6 +17,8 @@ use std::path::{Path, PathBuf};
 const CDROMREADTOCHDR: libc::c_ulong = 0x5305;
 const CDROMREADTOCENTRY: libc::c_ulong = 0x5306;
 const CDROM_DRIVE_STATUS: libc::c_ulong = 0x5326;
+const CDROMEJECT: libc::c_ulong = 0x5309;
+const CDROMCLOSETRAY: libc::c_ulong = 0x5319;
 
 const CDROM_LBA: u8 = 0x01;
 const CDROM_LEADOUT: u8 = 0xAA;
@@ -190,6 +192,28 @@ pub fn drive_attrs(device: &Path) -> (String, String, Option<String>) {
         get("model").unwrap_or_else(|| "unknown".into()),
         get("rev"),
     )
+}
+
+/// 弹出托盘。
+pub fn eject(device: &Path) -> Result<()> {
+    let dev = open_device(device)?;
+    let r = unsafe { libc::ioctl(dev.fd, CDROMEJECT, 0) };
+    if r < 0 {
+        return Err(std::io::Error::last_os_error())
+            .with_context(|| format!("弹出 {} 失败", device.display()));
+    }
+    Ok(())
+}
+
+/// 收回托盘（部分笔记本吸入式光驱不支持）。
+pub fn close_tray(device: &Path) -> Result<()> {
+    let dev = open_device(device)?;
+    let r = unsafe { libc::ioctl(dev.fd, CDROMCLOSETRAY, 0) };
+    if r < 0 {
+        return Err(std::io::Error::last_os_error())
+            .with_context(|| format!("收回 {} 失败", device.display()));
+    }
+    Ok(())
 }
 
 /// 列出系统里的光驱设备（/dev/sr*），用于 GUI 的设备下拉。

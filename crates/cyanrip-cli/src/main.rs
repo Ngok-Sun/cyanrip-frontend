@@ -33,6 +33,7 @@ fn real_main() -> Result<()> {
         "probe" => probe(&args[1..]),
         "parse-log" => parse_log_cmd(&args[1..]),
         "rip" => rip_cmd(&args[1..]),
+        "eject" => eject_cmd(&args[1..]),
         "-h" | "--help" | "help" => {
             usage();
             Ok(())
@@ -48,7 +49,8 @@ fn usage() {
          用法:\n\
          \x20 cyanrip-cli probe   [--device /dev/sr0] [--json]\n\
          \x20 cyanrip-cli parse-log <file> [--json]\n\
-         \x20 cyanrip-cli rip     [--device /dev/sr0] [--offset 48] [--log FILE] [-- <cyanrip 参数>...]\n"
+         \x20 cyanrip-cli rip     [--device /dev/sr0] [--offset 48] [--log FILE] [-- <cyanrip 参数>...]\n\
+         \x20 cyanrip-cli eject   [--device /dev/sr0] [--close]\n"
     );
 }
 
@@ -56,6 +58,19 @@ fn flag_value(args: &[String], name: &str) -> Option<String> {
     args.iter()
         .position(|a| a == name)
         .and_then(|i| args.get(i + 1).cloned())
+}
+
+fn eject_cmd(args: &[String]) -> Result<()> {
+    let device = flag_value(args, "--device").unwrap_or_else(|| "/dev/sr0".into());
+    let close = args.iter().any(|a| a == "--close");
+    if close {
+        cyanrip_core::disc::close_tray(PathBuf::from(&device).as_path())?;
+        println!("{device} 托盘已收回");
+    } else {
+        cyanrip_core::disc::eject(PathBuf::from(&device).as_path())?;
+        println!("{device} 托盘已弹出");
+    }
+    Ok(())
 }
 
 fn probe(args: &[String]) -> Result<()> {
