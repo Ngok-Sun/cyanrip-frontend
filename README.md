@@ -3,7 +3,6 @@
 cyanrip 的原生 GTK4 前端（Rust）。设计文档见 [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)。
 
 当前状态：**v1.0**（2026-11-08）。M1–M4 完成并通过真碟验收。
-剩余 M4：失败重试、设置项接线、多语言验证、可选 flatpak。队列/自动换碟已决定不做。
 
 ## 结构
 
@@ -23,7 +22,7 @@ crates/cyanrip-gui/    # GTK4 + libadwaita 前端（碟片 / 进度 / 结果 / �
 
 ```bash
 cargo build
-cargo test          # 32 个单测 + 2 个流式/取消集成测试，全部离线
+cargo test          # 53 个测试（含流式/取消、归档模板、i18n 覆盖），全部离线
 ```
 
 ## 双光驱同时抓轨
@@ -136,6 +135,12 @@ cargo run -p cyanrip-cli -- rip --device /dev/sr0 --offset 48 -- -Z 2 -P 3 -o fl
 ## 已知坑
 
 - `CDROMREADTOCHDR` 是 **0x5305**，不是 0x5302（0x5302 是 `CDROMRESUME`）。写错时 ioctl 返回 0、缓冲区一个字节都不写，属于静默失败——本项目踩过一次。
-- 全碟进度依赖 TOC 的轨长；用 `-l` 只抓部分轨时，ETA 仍按整碟估算。
+- 全碟进度按**实际勾选的轨**折算；cyanrip 自带的 ETA 是滑动窗口估算，开头几秒可能很离谱，程序会自己重算。
 - 本机经 SiI3811 桥接：`CDROMEJECT` ioctl 会被拒绝（内核日志 `0x53/0x02 MEDIUM REMOVAL PREVENTED`）且返回 0（假成功），必须走 util-linux `eject`（SCSI `START STOP UNIT`）路径。
 - `AdwApplicationWindow` 不支持 `set_titlebar`，标题栏要用 `adw::ToolbarView` 承载。
+
+## 许可证
+
+GPL-3.0-or-later，见 [LICENSE](LICENSE)。
+
+`cyanrip` 本身是 GPL-2.0-or-later 的独立程序，本项目通过子进程调用它，不链接其代码。

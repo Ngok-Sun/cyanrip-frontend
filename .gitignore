@@ -5,3 +5,4 @@
 
 # gettext 编译产物（用 msgfmt 生成）
 po/**/*.mo
+*.po~
