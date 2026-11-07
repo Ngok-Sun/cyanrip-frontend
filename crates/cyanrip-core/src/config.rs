@@ -169,6 +169,8 @@ impl Secrets {
 pub struct MetaSettings {
     /// 优先级顺序：musicbrainz / acoustid / discogs
     pub priority: Vec<String>,
+    /// 允许使用的封面刮削器：musicbrainz / discogs / google；空 = 完全不刮封面
+    pub cover_sources: Vec<String>,
     pub language: String,
     pub cover_max_px: u32,
 }
@@ -177,6 +179,7 @@ impl Default for MetaSettings {
     fn default() -> Self {
         Self {
             priority: vec!["musicbrainz".into(), "acoustid".into(), "discogs".into()],
+            cover_sources: vec!["musicbrainz".into(), "discogs".into(), "google".into()],
             language: "zh".into(),
             cover_max_px: 1200,
         }

@@ -93,6 +93,9 @@ pub struct Ui {
     pub discogs_row: adw::PasswordEntryRow,
     pub google_key_row: adw::PasswordEntryRow,
     pub google_cx_row: adw::EntryRow,
+    pub cover_mb_check: gtk::CheckButton,
+    pub cover_discogs_check: gtk::CheckButton,
+    pub cover_google_check: gtk::CheckButton,
     pub sound_switch: adw::SwitchRow,
     pub theme_combo: adw::ComboRow,
     pub theme_test_btn: gtk::Button,
@@ -341,6 +344,7 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
         discogs: discogs_row,
         google_key: google_key_row,
         google_cx: google_cx_row,
+        cover_checks,
         sound: sound_switch,
         theme: theme_combo,
         theme_test: theme_test_btn,
@@ -420,6 +424,9 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
         discogs_row,
         google_key_row,
         google_cx_row,
+        cover_mb_check: cover_checks[0].clone(),
+        cover_discogs_check: cover_checks[1].clone(),
+        cover_google_check: cover_checks[2].clone(),
         sound_switch,
         theme_combo,
         theme_test_btn,
@@ -453,6 +460,7 @@ struct SettingsWidgets {
     discogs: adw::PasswordEntryRow,
     google_key: adw::PasswordEntryRow,
     google_cx: adw::EntryRow,
+    cover_checks: [gtk::CheckButton; 3],
     sound: adw::SwitchRow,
     theme: adw::ComboRow,
     theme_test: gtk::Button,
@@ -557,6 +565,28 @@ fn build_settings_page(state: &Rc<RefCell<AppState>>) -> SettingsWidgets {
         .build();
     meta_group.add(&google_key_row);
     meta_group.add(&google_cx_row);
+
+    // 封面刮削器多选：都不勾 = 不刮封面
+    let source_labels = ["musicbrainz", "discogs", "google"];
+    let mut cover_checks = Vec::new();
+    for key in source_labels {
+        let label = match key {
+            "musicbrainz" => tr("MusicBrainz / Cover Art Archive"),
+            "discogs" => tr("Discogs"),
+            _ => tr("Google 图片搜索"),
+        };
+        let row = adw::ActionRow::builder()
+            .title(label)
+            .activatable(true)
+            .build();
+        let check = gtk::CheckButton::new();
+        check.set_active(s.meta.cover_sources.iter().any(|x| x == key));
+        check.set_valign(gtk::Align::Center);
+        row.add_suffix(&check);
+        meta_group.add(&row);
+        cover_checks.push(check);
+    }
+    let cover_checks: [gtk::CheckButton; 3] = cover_checks.try_into().unwrap();
 
     // 行为
     let behavior_group = adw::PreferencesGroup::builder().title(tr("行为")).build();
@@ -666,6 +696,7 @@ fn build_settings_page(state: &Rc<RefCell<AppState>>) -> SettingsWidgets {
         discogs: discogs_row,
         google_key: google_key_row,
         google_cx: google_cx_row,
+        cover_checks,
         sound: sound_switch,
         theme: theme_combo,
         theme_test,
@@ -926,6 +957,19 @@ fn connect_signals(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
         let ui2 = ui.clone();
         ui.discogs_row.connect_changed(move |e| {
             st.borrow_mut().secrets.discogs_token = e.text().to_string();
+            mark_dirty(&ui2, &st);
+        });
+    }
+    for check in [
+        ui.cover_mb_check.clone(),
+        ui.cover_discogs_check.clone(),
+        ui.cover_google_check.clone(),
+    ] {
+        let st = state.clone();
+        let ui2 = ui.clone();
+        check.connect_toggled(move |_| {
+            let sources = collect_cover_sources(&ui2);
+            st.borrow_mut().settings.meta.cover_sources = sources;
             mark_dirty(&ui2, &st);
         });
     }
@@ -2014,6 +2058,21 @@ pub fn import_cue_path(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>, path: &Path) 
         .add_toast(adw::Toast::new(&format!("{} {}", tr("已导入"), title)));
 }
 
+/// 当前勾选的封面刮削器
+fn collect_cover_sources(ui: &Rc<Ui>) -> Vec<String> {
+    let mut out = Vec::new();
+    if ui.cover_mb_check.is_active() {
+        out.push("musicbrainz".into());
+    }
+    if ui.cover_discogs_check.is_active() {
+        out.push("discogs".into());
+    }
+    if ui.cover_google_check.is_active() {
+        out.push("google".into());
+    }
+    out
+}
+
 /// 候选的唯一键：同一次识别里区分不同发行版
 fn release_key(r: &MetaRelease) -> String {
     format!("{}:{}", r.source.as_str(), r.id)
@@ -2021,6 +2080,15 @@ fn release_key(r: &MetaRelease) -> String {
 
 /// 取候选的封面：缓存命中就直接显示，否则后台下载（不阻塞 GTK 主线程）。
 fn request_cover(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>, force: bool) {
+    let sources = state.borrow().settings.meta.cover_sources.clone();
+    if sources.is_empty() {
+        if std::env::var("CYANRIP_GUI_DEBUG").as_deref() == Ok("1") {
+            eprintln!("COVER skipped=disabled");
+        }
+        show_cover_placeholder(ui, &tr("未启用封面刮削"));
+        return;
+    }
+    let enabled = |name: &str| sources.iter().any(|x| x == name);
     let release = state.borrow().current_release().cloned();
     let Some(release) = release else {
         show_cover_placeholder(ui, &tr("无封面"));
@@ -2052,8 +2120,19 @@ fn request_cover(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>, force: bool) {
         }
     };
     let key = release_key(&release);
-    // 已有缓存就直接用（不同素材源的 URL 可能不同，但同一条候选就认这张）
-    let primary = release.cover_url.clone();
+    // 候选自带的 URL 归属：MB 候选 → CAA，Discogs 候选 → Discogs 主图
+    let primary_enabled = match release.source {
+        MetaSource::MusicBrainz => enabled("musicbrainz"),
+        MetaSource::Discogs => enabled("discogs"),
+        _ => false,
+    };
+    let primary = if primary_enabled {
+        release.cover_url.clone()
+    } else {
+        None
+    };
+    let use_discogs = enabled("discogs");
+    let use_google = enabled("google");
     if !force {
         if let Some((cached_key, path)) = ui.cover_cache.borrow().as_ref() {
             if cached_key == &key && path.exists() {
@@ -2088,17 +2167,21 @@ fn request_cover(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>, force: bool) {
             if debug {
                 eprintln!("COVER step=primary failed");
             }
-            if let Some(alt) = meta::cover_fallback(&release, token.as_deref()) {
-                res = meta::download_cover(&alt);
-                if debug {
-                    eprintln!("COVER step=discogs ok={}", res.is_ok());
+            if use_discogs {
+                if let Some(alt) = meta::cover_fallback(&release, token.as_deref()) {
+                    res = meta::download_cover(&alt);
+                    if debug {
+                        eprintln!("COVER step=discogs ok={}", res.is_ok());
+                    }
+                } else if debug {
+                    eprintln!("COVER step=discogs none");
                 }
             } else if debug {
-                eprintln!("COVER step=discogs none");
+                eprintln!("COVER step=discogs disabled");
             }
         }
         // Google 图片搜索兜底（需在设置里配 key + cx）
-        if res.is_err() {
+        if res.is_err() && use_google {
             match meta::google_cover(&release, google_key.as_deref(), google_cx.as_deref()) {
                 Some(alt) => {
                     res = meta::download_cover(&alt);
@@ -2220,20 +2303,28 @@ fn apply_meta(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
     };
     let root = state.borrow().settings.output.root.clone();
     let cached_cover = ui.cover_cache.borrow().clone();
+    let cover_enabled = !state.borrow().settings.meta.cover_sources.is_empty();
     ui.meta_status.set_text(&tr("写入标签中…"));
     ui.meta_apply_btn.set_sensitive(false);
     let (tx, rx) = mpsc::channel();
     *ui.meta_rx.borrow_mut() = Some(rx);
     std::thread::spawn(move || {
         let files = tag::flac_files(&dir);
+        // 设置里一个刮削器都没勾 → 不写封面（cover_enabled 在 spawn 前算好）
         // 优先复用界面上已经下载好的封面（包括 Discogs 兜底那张）
         let key = format!("{}:{}", release.source.as_str(), release.id);
-        let cover = match &cached_cover {
-            Some((cached_key, path)) if cached_key == &key && path.exists() => Some(path.clone()),
-            _ => release
-                .cover_url
-                .as_deref()
-                .and_then(|u| meta::download_cover(u).ok()),
+        let cover = if !cover_enabled {
+            None
+        } else {
+            match &cached_cover {
+                Some((cached_key, path)) if cached_key == &key && path.exists() => {
+                    Some(path.clone())
+                }
+                _ => release
+                    .cover_url
+                    .as_deref()
+                    .and_then(|u| meta::download_cover(u).ok()),
+            }
         };
         let out = match tag::apply(&files, &release, &root, (1, 1), cover.as_deref()) {
             Ok(d) => MetaOutcome::Applied(d),

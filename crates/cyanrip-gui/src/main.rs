@@ -188,6 +188,18 @@ fn main() -> glib::ExitCode {
                 let after = st2.borrow().disc.as_ref().map(|d| d.leadout_lsn);
                 let devs_after = ui2.device_paths.borrow().len();
                 let refresh_ok = before == after && devs_before == devs_after;
+                // 封面刮削器多选
+                ui2.cover_mb_check.set_active(false);
+                ui2.cover_discogs_check.set_active(false);
+                ui2.cover_google_check.set_active(false);
+                let covers_empty = st2.borrow().settings.meta.cover_sources.is_empty();
+                ui2.cover_mb_check.set_active(true);
+                let covers_one =
+                    st2.borrow().settings.meta.cover_sources == vec!["musicbrainz".to_string()];
+                ui2.cover_discogs_check.set_active(true);
+                ui2.cover_google_check.set_active(true);
+                let covers_all = st2.borrow().settings.meta.cover_sources.len() == 3;
+
                 // 设置页：提示音下拉 + 输出目录行
                 let theme_events = ui2.sound_events.borrow().len();
                 let theme_before = st2.borrow().settings.behavior.sound_theme.clone();
@@ -224,7 +236,7 @@ fn main() -> glib::ExitCode {
                     .unwrap_or(false);
 
                 println!(
-                    "SELFTEST initial_disabled={initial_disabled} dirty={dirty} saved={saved} clean_after_save={clean} all_off={all_off} all_on={all_on} devices={devices} selected={sel_dev} refresh_ok={refresh_ok} eject_icon={icon_ok} eject_classes={eject_classes:?} token_dirty={token_dirty} token_saved={token_saved} secrets_mode={secrets_mode} config_has_token={config_has_token} refresh_classes={refresh_classes:?} theme_events={theme_events} theme_combo_ok={combo_ok} root_subtitle={root_subtitle:?} disc_after={after:?}"
+                    "SELFTEST initial_disabled={initial_disabled} dirty={dirty} saved={saved} clean_after_save={clean} all_off={all_off} all_on={all_on} devices={devices} selected={sel_dev} refresh_ok={refresh_ok} eject_icon={icon_ok} eject_classes={eject_classes:?} covers_empty={covers_empty} covers_one={covers_one} covers_all={covers_all} token_dirty={token_dirty} token_saved={token_saved} secrets_mode={secrets_mode} config_has_token={config_has_token} refresh_classes={refresh_classes:?} theme_events={theme_events} theme_combo_ok={combo_ok} root_subtitle={root_subtitle:?} disc_after={after:?}"
                 );
                 app2.quit();
                 glib::ControlFlow::Break
