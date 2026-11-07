@@ -154,6 +154,65 @@ pub fn parse_file(path: &Path) -> Result<MetaRelease> {
     Ok(rel)
 }
 
+/// 生成 CUE 文本（单镜像风格：一条 FILE，INDEX 从第一轨起算）。
+pub fn render_cue(info: &crate::model::DiscInfo, release: &MetaRelease) -> String {
+    fn esc(s: &str) -> String {
+        s.replace('\\', "\\\\").replace('"', "\\\"")
+    }
+    let mut out = String::new();
+    if !release.artist.is_empty() {
+        out.push_str(&format!("PERFORMER \"{}\"\n", esc(&release.artist)));
+    }
+    out.push_str(&format!("TITLE \"{}\"\n", esc(&release.title)));
+    if let Some(d) = release.date.as_deref() {
+        out.push_str(&format!("REM DATE {d}\n"));
+    }
+    if release.disc_total > 1 {
+        out.push_str(&format!("REM DISCNUMBER {}\n", release.disc_number.max(1)));
+        out.push_str(&format!("REM TOTALDISCS {}\n", release.disc_total));
+    }
+    if let Some(c) = release.catno.as_deref() {
+        out.push_str(&format!("CATALOG {c}\n"));
+    }
+    if let Some(b) = release.barcode.as_deref() {
+        out.push_str(&format!("REM BARCODE {b}\n"));
+    }
+    match release.source {
+        MetaSource::MusicBrainz => {
+            out.push_str(&format!("REM MUSICBRAINZ_ID \"{}\"\n", release.id))
+        }
+        MetaSource::Discogs => out.push_str(&format!("REM DISCOGS_RELEASE {}\n", release.id)),
+        _ => {}
+    }
+    out.push_str(&format!(
+        "REM COMMENT \"cyanrip-frontend export, {} track(s)\"\n",
+        release.tracks.len()
+    ));
+    out.push_str(&format!("FILE \"{}.flac\" WAVE\n", esc(&release.title)));
+
+    let audio: Vec<&crate::model::TrackInfo> = info.tracks.iter().filter(|t| t.is_audio).collect();
+    let first_lsn = audio.first().map(|t| t.start_lsn).unwrap_or(0);
+    for (i, t) in audio.iter().enumerate() {
+        let title = release
+            .tracks
+            .get(i)
+            .map(|m| m.title.clone())
+            .or_else(|| t.title.clone())
+            .unwrap_or_else(|| format!("Track {:02}", t.number));
+        let rel = t.start_lsn.saturating_sub(first_lsn);
+        let frames = rel % 75;
+        let secs = (rel / 75) % 60;
+        let mins = rel / 75 / 60;
+        out.push_str(&format!("  TRACK {:02} AUDIO\n", t.number));
+        out.push_str(&format!("    TITLE \"{}\"\n", esc(&title)));
+        if !release.artist.is_empty() {
+            out.push_str(&format!("    PERFORMER \"{}\"\n", esc(&release.artist)));
+        }
+        out.push_str(&format!("    INDEX 01 {mins:02}:{secs:02}:{frames:02}\n"));
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -186,6 +245,51 @@ FILE "CD2-02 静止.flac" WAVE
         assert_eq!(r.tracks[0].number, 1);
         assert_eq!(r.tracks[0].title, "稻草上的火鸡");
         assert_eq!(r.tracks[1].title, "静止");
+    }
+
+    #[test]
+    fn renders_cue_with_index_times() {
+        use crate::model::{DiscInfo, TrackInfo};
+        let info = DiscInfo {
+            device: "x".into(),
+            vendor: String::new(),
+            model: String::new(),
+            firmware: None,
+            tracks: vec![
+                TrackInfo {
+                    number: 1,
+                    start_lsn: 0,
+                    duration_frames: 7500,
+                    is_audio: true,
+                    title: None,
+                    isrc: None,
+                },
+                TrackInfo {
+                    number: 2,
+                    start_lsn: 7500 + 150,
+                    duration_frames: 7500,
+                    is_audio: true,
+                    title: None,
+                    isrc: None,
+                },
+            ],
+            leadout_lsn: 15150,
+            total_frames: 15150,
+            disc_id: None,
+            cddb_id: None,
+            mcn: None,
+            ar_in_db: None,
+        };
+        let rel = parse_str("PERFORMER \"A\"\nTITLE \"B\"\nTRACK 01 AUDIO\nTITLE \"one\"\nTRACK 02 AUDIO\nTITLE \"two\"\n", "x");
+        let text = render_cue(&info, &rel);
+        assert!(text.contains("PERFORMER \"A\""));
+        assert!(text.contains("TRACK 01 AUDIO"));
+        assert!(text.contains("INDEX 01 00:00:00"));
+        // 第 2 轨从 7650 扇区开始 = 102 秒
+        assert!(text.contains("INDEX 01 01:42:00"));
+        // 导出后能被自己的解析器读回
+        let back = parse_str(&text, "y");
+        assert_eq!(back.tracks.len(), 2);
     }
 
     #[test]

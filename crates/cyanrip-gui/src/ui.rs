@@ -30,6 +30,13 @@ pub enum MetaOutcome {
     ApplyFailed(String),
 }
 
+/// 导出线程 → UI
+#[derive(Debug)]
+pub enum ExportMsg {
+    Done(PathBuf, bool),
+    Failed(String),
+}
+
 /// 封面下载线程 → UI：(候选 key, 下载结果)
 type CoverMsg = (String, anyhow::Result<PathBuf>);
 
@@ -70,6 +77,8 @@ pub struct Ui {
     pub cover_picture: gtk::Picture,
     pub cover_placeholder: gtk::Label,
     pub cover_btn: gtk::Button,
+    pub export_btn: gtk::Button,
+    pub export_rx: RefCell<Option<mpsc::Receiver<ExportMsg>>>,
     /// (release key, 本地文件)；key = "来源:发行版 id"
     pub cover_cache: RefCell<Option<(String, PathBuf)>>,
     /// 正在下载的候选 key，避免重复请求（Google 有配额）
@@ -180,9 +189,12 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
     import_cue_btn.set_tooltip_text(Some(&tr(
         "从 CUE 表读取曲目名/专辑信息（用于 CD 数据库里查不到的碟）",
     )));
+    let export_btn = gtk::Button::with_label(&tr("导出 CUE + 封面"));
+    export_btn.set_tooltip_text(Some(&tr("把当前曲目信息写成 CUE，并导出封面图")));
     let meta_row = gtk::Box::new(Orientation::Horizontal, 8);
     meta_row.append(&meta_dropdown);
     meta_row.append(&import_cue_btn);
+    meta_row.append(&export_btn);
     let disc_meta_box = gtk::Box::new(Orientation::Vertical, 6);
     disc_meta_box.append(&meta_label);
     disc_meta_box.append(&meta_row);
@@ -405,6 +417,8 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
         cover_picture,
         cover_placeholder,
         cover_btn,
+        export_btn,
+        export_rx: RefCell::new(None),
         cover_cache: RefCell::new(None),
         cover_inflight: RefCell::new(None),
         cover_failed: RefCell::new(None),
@@ -828,6 +842,24 @@ fn connect_signals(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
         let st = state.clone();
         ui.meta_apply_btn
             .connect_clicked(move |_| apply_meta(&ui2, &st));
+    }
+    // 导出 CUE + 封面
+    {
+        let ui2 = ui.clone();
+        let st = state.clone();
+        ui.export_btn.connect_clicked(move |_| {
+            let dialog = gtk::FileDialog::builder()
+                .title(tr("选择导出目录"))
+                .modal(true)
+                .build();
+            let ui3 = ui2.clone();
+            let st3 = st.clone();
+            dialog.select_folder(Some(&ui2.window), gtk::gio::Cancellable::NONE, move |res| {
+                let Ok(folder) = res else { return };
+                let Some(dir) = folder.path() else { return };
+                start_export(&ui3, &st3, &dir);
+            });
+        });
     }
     // 取得封面（手动）
     {
@@ -2058,6 +2090,138 @@ pub fn import_cue_path(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>, path: &Path) 
         .add_toast(adw::Toast::new(&format!("{} {}", tr("已导入"), title)));
 }
 
+/// 导出 CUE + 封面到指定目录（后台线程，避免网络卡界面）
+pub fn start_export(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>, dir: &Path) {
+    let (disc, release) = {
+        let st = state.borrow();
+        (st.disc.clone(), st.current_release().cloned())
+    };
+    let (Some(disc), Some(release)) = (disc, release) else {
+        ui.toast
+            .add_toast(adw::Toast::new(&tr("请先识别碟片或导入 CUE")));
+        return;
+    };
+    let sources = state.borrow().settings.meta.cover_sources.clone();
+    let (token, gkey, gcx) = {
+        let st = state.borrow();
+        let pick = |v: &str| {
+            let t = v.trim().to_string();
+            if t.is_empty() {
+                None
+            } else {
+                Some(t)
+            }
+        };
+        (
+            pick(&st.secrets.discogs_token),
+            pick(&st.secrets.google_api_key),
+            pick(&st.secrets.google_cx),
+        )
+    };
+    let cached = ui.cover_cache.borrow().clone();
+    let dir = dir.to_path_buf();
+    let (tx, rx) = mpsc::channel();
+    *ui.export_rx.borrow_mut() = Some(rx);
+    ui.export_btn.set_sensitive(false);
+    std::thread::spawn(move || {
+        let res = (|| -> anyhow::Result<(PathBuf, bool)> {
+            std::fs::create_dir_all(&dir)?;
+            let base = tag::sanitize(&release.title);
+            let base = if base.trim().is_empty() {
+                "disc".to_string()
+            } else {
+                base
+            };
+            let cue_path = dir.join(format!("{base}.cue"));
+            let text = meta::cue::render_cue(&disc, &release);
+            // 带 BOM 更好被 Windows 上的工具识别
+            let mut bytes = Vec::with_capacity(text.len() + 3);
+            bytes.extend_from_slice(&[0xEF, 0xBB, 0xBF]);
+            bytes.extend_from_slice(text.as_bytes());
+            std::fs::write(&cue_path, bytes)?;
+
+            let cover = cached
+                .filter(|(k, _)| k == &format!("{}:{}", release.source.as_str(), release.id))
+                .map(|(_, p)| p)
+                .filter(|p| p.exists())
+                .or_else(|| {
+                    cover_chain(
+                        &release,
+                        &sources,
+                        token.as_deref(),
+                        gkey.as_deref(),
+                        gcx.as_deref(),
+                        false,
+                    )
+                });
+            let mut wrote_cover = false;
+            if let Some(src) = cover {
+                let ext = image_ext(&src);
+                let dest = dir.join(format!("{base}.{ext}"));
+                if std::fs::copy(&src, &dest).is_ok() {
+                    wrote_cover = true;
+                }
+            }
+            Ok((cue_path, wrote_cover))
+        })();
+        let _ = tx.send(match res {
+            Ok((p, c)) => ExportMsg::Done(p, c),
+            Err(e) => ExportMsg::Failed(format!("{e:#}")),
+        });
+    });
+}
+
+/// 按勾选的刮削器取一张封面（与界面上的取图链一致）
+fn cover_chain(
+    release: &MetaRelease,
+    sources: &[String],
+    token: Option<&str>,
+    gkey: Option<&str>,
+    gcx: Option<&str>,
+    debug: bool,
+) -> Option<PathBuf> {
+    let enabled = |n: &str| sources.iter().any(|x| x == n);
+    let primary_enabled = match release.source {
+        MetaSource::MusicBrainz => enabled("musicbrainz"),
+        MetaSource::Discogs => enabled("discogs"),
+        _ => false,
+    };
+    let mut res = match release.cover_url.as_deref() {
+        Some(u) if primary_enabled => meta::download_cover(u),
+        _ => Err(anyhow::anyhow!("no primary cover")),
+    };
+    if res.is_err() && debug {
+        eprintln!("COVER step=primary failed");
+    }
+    if res.is_err() && enabled("discogs") {
+        if let Some(alt) = meta::cover_fallback(release, token) {
+            res = meta::download_cover(&alt);
+        }
+    }
+    if res.is_err() && enabled("google") {
+        if let Some(alt) = meta::google_cover(release, gkey, gcx) {
+            res = meta::download_cover(&alt);
+        }
+    }
+    res.ok()
+}
+
+fn image_ext(path: &Path) -> &'static str {
+    use std::io::Read;
+    let mut magic = [0u8; 4];
+    if let Ok(mut f) = std::fs::File::open(path) {
+        if f.read_exact(&mut magic).is_ok() {
+            if magic[..2] == [0xFF, 0xD8] {
+                return "jpg";
+            }
+            if magic == *b"\x89PNG" {
+                return "png";
+            }
+        }
+    }
+    "img"
+}
+
 /// 当前勾选的封面刮削器
 fn collect_cover_sources(ui: &Rc<Ui>) -> Vec<String> {
     let mut out = Vec::new();
@@ -2362,6 +2526,35 @@ fn start_meta_pump(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
                     show_cover_placeholder(&ui2, &tr("封面下载失败"));
                     ui2.toast
                         .add_toast(adw::Toast::new(&format!("{}: {e}", tr("封面下载失败"))));
+                }
+            }
+        }
+        let export = {
+            let rx = ui2.export_rx.borrow();
+            rx.as_ref().and_then(|r| r.try_recv().ok())
+        };
+        if let Some(msg) = export {
+            ui2.export_btn.set_sensitive(true);
+            match msg {
+                ExportMsg::Done(path, cover) => {
+                    let name = path
+                        .file_name()
+                        .map(|s| s.to_string_lossy().to_string())
+                        .unwrap_or_default();
+                    ui2.toast.add_toast(adw::Toast::new(&format!(
+                        "{}{}{}",
+                        tr("已导出 "),
+                        name,
+                        if cover {
+                            tr("（含封面）")
+                        } else {
+                            String::new()
+                        }
+                    )));
+                }
+                ExportMsg::Failed(e) => {
+                    ui2.toast
+                        .add_toast(adw::Toast::new(&format!("{}: {e}", tr("导出失败"))));
                 }
             }
         }

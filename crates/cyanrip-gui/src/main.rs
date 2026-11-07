@@ -65,6 +65,13 @@ fn main() -> glib::ExitCode {
             }
         }
 
+        // 自测/脚本：直接导出到指定目录
+        if let Ok(dir) = std::env::var("CYANRIP_GUI_EXPORT_DIR") {
+            if !dir.trim().is_empty() {
+                ui::start_export(&ui, &state, std::path::Path::new(&dir));
+            }
+        }
+
         // 自动抓轨（端到端自测）：只抓第一轨，完成后打印结果并退出
         if std::env::var("CYANRIP_GUI_AUTORIP").as_deref() == Ok("1") {
             {
