@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-08 00:32+0900\n"
+"POT-Creation-Date: 2026-11-08 01:05+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -127,7 +127,7 @@ msgstr ""
 msgid "写入标签"
 msgstr ""
 
-#: crates/cyanrip-gui/src/ui.rs:370
+#: crates/cyanrip-gui/src/ui.rs:370 crates/cyanrip-gui/src/ui.rs:613
 msgid "元数据"
 msgstr ""
 
@@ -155,8 +155,16 @@ msgstr ""
 msgid "设置"
 msgstr ""
 
+#: crates/cyanrip-gui/src/ui.rs:548
+msgid "设备与驱动"
+msgstr ""
+
 #: crates/cyanrip-gui/src/ui.rs:554 crates/cyanrip-gui/src/ui.rs:2051
 msgid "Paranoia 级别"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:555
+msgid "3 = 最高（推荐）"
 msgstr ""
 
 #: crates/cyanrip-gui/src/ui.rs:561
@@ -167,8 +175,16 @@ msgstr ""
 msgid "校验次数 (-Z)"
 msgstr ""
 
+#: crates/cyanrip-gui/src/ui.rs:568
+msgid "0 = 单遍；2 = 读到两次校验和一致（约 3 遍）"
+msgstr ""
+
 #: crates/cyanrip-gui/src/ui.rs:573
 msgid "输出格式"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:598
+msgid "输出"
 msgstr ""
 
 #: crates/cyanrip-gui/src/ui.rs:601
@@ -207,6 +223,10 @@ msgstr ""
 msgid "Google 图片搜索"
 msgstr ""
 
+#: crates/cyanrip-gui/src/ui.rs:657
+msgid "行为"
+msgstr ""
+
 #: crates/cyanrip-gui/src/ui.rs:658
 msgid "跟随系统"
 msgstr ""
@@ -243,12 +263,24 @@ msgstr ""
 msgid "抓完关机"
 msgstr ""
 
+#: crates/cyanrip-gui/src/ui.rs:700
+msgid "默认关闭；开启后仍会二次确认"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:710
+msgid "高级"
+msgstr ""
+
 #: crates/cyanrip-gui/src/ui.rs:712
 msgid "cyanrip 可执行文件"
 msgstr ""
 
 #: crates/cyanrip-gui/src/ui.rs:728
 msgid "程序构建时间"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:735
+msgid "应用"
 msgstr ""
 
 #: crates/cyanrip-gui/src/ui.rs:736
@@ -259,12 +291,20 @@ msgstr ""
 msgid "设置状态"
 msgstr ""
 
+#: crates/cyanrip-gui/src/ui.rs:743 crates/cyanrip-gui/src/ui.rs:1206
+msgid "所有更改已保存"
+msgstr ""
+
 #: crates/cyanrip-gui/src/ui.rs:747
 msgid "恢复默认"
 msgstr ""
 
 #: crates/cyanrip-gui/src/ui.rs:750
 msgid "恢复默认设置"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:751
+msgid "不会立即写入，仍需点击保存"
 msgstr ""
 
 #: crates/cyanrip-gui/src/ui.rs:894
@@ -285,10 +325,6 @@ msgstr ""
 
 #: crates/cyanrip-gui/src/ui.rs:1067
 msgid "选择输出根目录"
-msgstr ""
-
-#: crates/cyanrip-gui/src/ui.rs:1206
-msgid "所有更改已保存"
 msgstr ""
 
 #: crates/cyanrip-gui/src/ui.rs:1208

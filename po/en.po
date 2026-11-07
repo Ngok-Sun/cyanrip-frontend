@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: cyanrip-frontend\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-08 00:32+0900\n"
+"POT-Creation-Date: 2026-11-08 01:05+0900\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -118,7 +118,7 @@ msgstr "Metadata can be identified after ripping"
 msgid "写入标签"
 msgstr "Write tags"
 
-#: crates/cyanrip-gui/src/ui.rs:370
+#: crates/cyanrip-gui/src/ui.rs:370 crates/cyanrip-gui/src/ui.rs:613
 msgid "元数据"
 msgstr "Metadata"
 
@@ -146,9 +146,17 @@ msgstr "Result"
 msgid "设置"
 msgstr "Settings"
 
+#: crates/cyanrip-gui/src/ui.rs:548
+msgid "设备与驱动"
+msgstr "Device & drive"
+
 #: crates/cyanrip-gui/src/ui.rs:554 crates/cyanrip-gui/src/ui.rs:2051
 msgid "Paranoia 级别"
 msgstr "Paranoia level"
+
+#: crates/cyanrip-gui/src/ui.rs:555
+msgid "3 = 最高（推荐）"
+msgstr "3 = highest (recommended)"
 
 #: crates/cyanrip-gui/src/ui.rs:561
 msgid "帧重试次数"
@@ -158,9 +166,17 @@ msgstr "Frame retries"
 msgid "校验次数 (-Z)"
 msgstr "Verify passes (-Z)"
 
+#: crates/cyanrip-gui/src/ui.rs:568
+msgid "0 = 单遍；2 = 读到两次校验和一致（约 3 遍）"
+msgstr "0 = single pass; 2 = read until two checksums match (~3 passes)"
+
 #: crates/cyanrip-gui/src/ui.rs:573
 msgid "输出格式"
 msgstr "Output format"
+
+#: crates/cyanrip-gui/src/ui.rs:598
+msgid "输出"
+msgstr "Output"
 
 #: crates/cyanrip-gui/src/ui.rs:601
 msgid "输出根目录"
@@ -198,6 +214,10 @@ msgstr "Discogs"
 msgid "Google 图片搜索"
 msgstr "Google image search"
 
+#: crates/cyanrip-gui/src/ui.rs:657
+msgid "行为"
+msgstr "Behaviour"
+
 #: crates/cyanrip-gui/src/ui.rs:658
 msgid "跟随系统"
 msgstr "Follow system"
@@ -234,6 +254,14 @@ msgstr "Desktop notification"
 msgid "抓完关机"
 msgstr "Shut down when done"
 
+#: crates/cyanrip-gui/src/ui.rs:700
+msgid "默认关闭；开启后仍会二次确认"
+msgstr "Off by default; still asks for confirmation"
+
+#: crates/cyanrip-gui/src/ui.rs:710
+msgid "高级"
+msgstr "Advanced"
+
 #: crates/cyanrip-gui/src/ui.rs:712
 msgid "cyanrip 可执行文件"
 msgstr "cyanrip executable"
@@ -241,6 +269,10 @@ msgstr "cyanrip executable"
 #: crates/cyanrip-gui/src/ui.rs:728
 msgid "程序构建时间"
 msgstr "Build time"
+
+#: crates/cyanrip-gui/src/ui.rs:735
+msgid "应用"
+msgstr "Apply"
 
 #: crates/cyanrip-gui/src/ui.rs:736
 msgid "保存"
@@ -250,6 +282,10 @@ msgstr "Save"
 msgid "设置状态"
 msgstr "Settings status"
 
+#: crates/cyanrip-gui/src/ui.rs:743 crates/cyanrip-gui/src/ui.rs:1206
+msgid "所有更改已保存"
+msgstr "All changes saved"
+
 #: crates/cyanrip-gui/src/ui.rs:747
 msgid "恢复默认"
 msgstr "Restore defaults"
@@ -257,6 +293,10 @@ msgstr "Restore defaults"
 #: crates/cyanrip-gui/src/ui.rs:750
 msgid "恢复默认设置"
 msgstr "Restore default settings"
+
+#: crates/cyanrip-gui/src/ui.rs:751
+msgid "不会立即写入，仍需点击保存"
+msgstr "Not written immediately; click Save"
 
 #: crates/cyanrip-gui/src/ui.rs:894
 msgid "正在取消…"
@@ -277,10 +317,6 @@ msgstr "Log copied to clipboard"
 #: crates/cyanrip-gui/src/ui.rs:1067
 msgid "选择输出根目录"
 msgstr "Choose output root"
-
-#: crates/cyanrip-gui/src/ui.rs:1206
-msgid "所有更改已保存"
-msgstr "All changes saved"
 
 #: crates/cyanrip-gui/src/ui.rs:1208
 msgid "设置已保存"
@@ -590,30 +626,3 @@ msgstr "Tags written"
 #: crates/cyanrip-gui/src/ui.rs:2830
 msgid "写入失败："
 msgstr "Write failed:"
-
-#~ msgid "设备与驱动"
-#~ msgstr "Device & drive"
-
-#~ msgid "3 = 最高（推荐）"
-#~ msgstr "3 = highest (recommended)"
-
-#~ msgid "0 = 单遍；2 = 读到两次校验和一致（约 3 遍）"
-#~ msgstr "0 = single pass; 2 = read until two checksums match (~3 passes)"
-
-#~ msgid "输出"
-#~ msgstr "Output"
-
-#~ msgid "行为"
-#~ msgstr "Behaviour"
-
-#~ msgid "默认关闭；开启后仍会二次确认"
-#~ msgstr "Off by default; still asks for confirmation"
-
-#~ msgid "高级"
-#~ msgstr "Advanced"
-
-#~ msgid "应用"
-#~ msgstr "Apply"
-
-#~ msgid "不会立即写入，仍需点击保存"
-#~ msgstr "Not written immediately; click Save"

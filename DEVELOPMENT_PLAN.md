@@ -861,7 +861,7 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 | markup 修复 | 分组标题/副标题统一 `markup_escape_text`（英文译名含 `&` 触发 Pango 报错） | en 运行无 Gtk-WARNING |
 | 界面语言下拉 | 设置→行为→界面语言：跟随系统/中文/English，写 `ui.language`，下次启动生效 | 6 种组合（3 设置 × 2 LANG）全部正确 |
 | 翻译同步 | `po/update.sh`：xgettext → msgmerge → msgfmt → 装到 `~/.local/share/locale` | 英文界面下标题 "Interface language" / 副标题 "Takes effect after restarting the app" |
-| 全量英文 | 143 条 msgid 全部翻译（含进度/结果/错误/表格列名等 55 条），`msgattrib` 未翻译 = 0 | 新增 `i18n_coverage` 测试：pot 里每条都要有非空 msgstr |
+| 全量英文 | 153 条 msgid 全部翻译（含进度/结果/错误/表格列名、设置页分组标题/副标题） | `i18n_coverage` 测试 + 运行时 `gettext` 校验：中文残留 0 |
 
 ### M4 — 剩余工作
 
@@ -906,6 +906,7 @@ CYANRIP_GUI_STANDALONE=1 CYANRIP_GUI_SELFTEST=1 ./target/debug/cyanrip-frontend
 
 | commit | 日期 | 说明 |
 |---|---|---|
+| `15acdb7` | 11-08 | i18n: complete English translations (143 msgids) + coverage test |
 | `769f252` | 11-08 | i18n: translate new language settings; add po/update.sh |
 | `eefd133` | 11-08 | docs: mention UI language dropdown |
 | `95fc5b7` | 11-08 | settings: UI language dropdown (auto/zh/en), applied after GTK locale reset |

@@ -37,6 +37,12 @@ fn every_msgid_is_translated() {
         }
     }
 
+    // trm() 也必须被 xgettext 提取，否则分组标题会静默漏翻
+    assert!(
+        msgids(&pot).iter().any(|m| m == "输出"),
+        "pot 缺少 trm() 文案：检查 po/update.sh 里的 -ktrm"
+    );
+
     let missing: Vec<String> = msgids(&pot)
         .into_iter()
         .filter(|m| map.get(m).map(|v| v.is_empty()).unwrap_or(true))
