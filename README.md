@@ -3,7 +3,7 @@
 cyanrip 的原生 GTK4 前端（Rust）。设计文档见 [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)。
 
 当前状态：**M3 完成**，并已实现 M3 之后的增补（封面三级兜底、CUE 导入/导出、双碟套装、双光驱并行、HDCD 勾选、应用图标）。
-剩余 M4：队列/自动换碟、多语言验证、可选 flatpak。
+剩余 M4：失败重试、设置项接线、多语言验证、可选 flatpak。队列/自动换碟已决定不做。
 
 ## 结构
 

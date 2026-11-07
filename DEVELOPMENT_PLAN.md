@@ -2,7 +2,7 @@
 
 > 状态：M1（core + CLI）、M2（GUI 五页）、M3（元数据与标签）已完成并通过真碟验收；
 > M3 之后的交互/封面/多碟/多实例/HDCD 等增补也已完成（见 §15.3）。
-> 剩余：队列与自动换碟为主（§15.4）
+> 剩余：失败重试、设置项接线、多语言验证、可选 flatpak（§15.4）；**队列/自动换碟已取消**
 > 实施进度见 §15，自测开关见 §16，变更日志见 §17
 > 编写日期：2026-11-06
 > 目标平台：Linux（GNOME / Wayland 优先），Rust + GTK4 + libadwaita
@@ -20,9 +20,11 @@
 
 1. **不重新实现 CD 读取**：所有读取、纠错、校验交给 `cyanrip` 子进程，GUI 只做编排、解析与呈现。
 2. **可追溯**：每张碟产出的 EAC 风格 log、等价命令行、AR 命中的 confidence 都可在界面内查看与导出。
-3. **不阻塞 UI**：GTK 主线程只渲染；所有 I/O（子进程、HTTP）在 tokio runtime，事件回投主循环。
+3. **不阻塞 UI**：GTK 主线程只渲染；抓轨子进程在独立线程的 tokio runtime，HTTP 与弹出托盘在普通线程，
+   结果统一经 mpsc 回主循环（100ms 轮询）。
 4. **离线可用**：元数据查询失败不阻塞抓轨；无网络时按 `Unknown CD <日期>` 落盘，事后再补标签。
-5. **参数透明**：界面随时显示等价的 `cyanrip` 命令行，避免"界面一套、实际一套"。
+5. **参数可追溯**：抓轨日志与结果页保留 cyanrip 的原始输出、等价参数在调试模式下可打印；
+   界面上的"命令行预览/复制"尚未实现（M4 待办）。
 
 ### 1.3 非目标（本阶段不做）
 
@@ -32,7 +34,8 @@
 - 音乐库管理（不替代 beets，只负责单张/整箱碟的抓取与标签写入）
 - CD-TEXT 编辑、封面 OCR、歌词抓取
 - 抓轨之外的自动化（上传 NAS、触发 beets 导入、远端归档等）——留作后续扩展
-- 多语言界面（本阶段只出中文，但所有用户可见字符串必须走 i18n 通道，见 §7.6）
+- **队列 / 自动换碟**（2026-11-07 决定不做；需要并行时用多实例 + 两台光驱，见 §7.8）
+- 多语言界面（只出中文；字符串已走 gettext 通道，但 msgid 就是中文，未随包带 `.po`）
 
 ---
 
@@ -42,9 +45,9 @@
 
 | 组件 | 版本要求 | 本机现状 |
 |---|---|---|
-| Rust | stable ≥ 1.75（rustup 安装） | **未安装** |
-| GTK4 开发头文件 | ≥ 4.10 | 运行库 4.14.5，`libgtk-4-dev` **未安装** |
-| libadwaita 开发头文件 | ≥ 1.4 | 运行库 1.5，`libadwaita-1-dev` **未安装** |
+| Rust | stable ≥ 1.75（rustup 安装） | 1.99.1 ✅（rustup stable + rustfmt/clippy） |
+| GTK4 开发头文件 | ≥ 4.10 | GTK 4.14.5 + `libgtk-4-dev` ✅ |
+| libadwaita 开发头文件 | ≥ 1.4 | libadwaita 1.5 + `libadwaita-1-dev` ✅ |
 | cyanrip | ≥ 0.9.4（含 MEDIA_CHECK 限流） | `/usr/local/bin/cyanrip` 0.9.4-rc3 ✅ |
 | cdrdao | 任意 | 1.2.4 ✅（读 TOC / ISRC） |
 | fpcalc (chromaprint) | 1.5+ | 1.5.1 ✅ |
@@ -72,7 +75,7 @@ sudo apt install -y libgtk-4-dev libadwaita-1-dev build-essential pkg-config
 - 错误：`thiserror`（库层）、`anyhow`（应用层）
 - 日志：`tracing`（CLI）
 - 其他：`directories`、`chrono`、`regex`、`libc`（ioctl）
-- 国际化：`gettext-rs`（配合 `xgettext` 提取，`po/zh_CN.po` 随包）
+- 国际化：`gettext-rs`；**msgid 就是中文**，没有 `.mo` 时原样输出（不随包带 po）
 - 提示音不引入 Rust 依赖：调用 `canberra-gtk-play` / `pw-play`，避免为一段音效拉 gstreamer-rs 及 dev 头文件
 
 ### 2.3 不引入的依赖
@@ -88,53 +91,52 @@ sudo apt install -y libgtk-4-dev libadwaita-1-dev build-essential pkg-config
 ```
 cyanrip-frontend/
 ├─ Cargo.toml                     # [workspace] members = crates/*
-├─ DEVELOPMENT_PLAN.md            # 本文件
+├─ DEVELOPMENT_PLAN.md
 ├─ README.md
 ├─ assets/
-│  ├─ icons/                      # 应用图标、状态图标
-│  └─ style.css                   # 少量自定义样式
-├─ tests/
-│  └─ fixtures/                   # 真实 cyanrip log、MB/Discogs JSON 快照
-│     ├─ log_quartet.txt          # 久石譲 Quartet，13/13 AR conf 8
-│     ├─ log_flower_cd1.txt       # 花儿乐队 CD1，15/16 AR
-│     ├─ log_flower_cd2.txt       # 花儿乐队 CD2，8/8 AR
-│     └─ json/                    # 录制好的 API 响应
+│  └─ io.github.cyanrip.Frontend.svg   # 应用图标（CD + RIP 字样）
 └─ crates/
    ├─ cyanrip-core/               # lib，不含 GTK
-   │  └─ src/
-   │     lib.rs
-   │     disc.rs                  # TOC / 碟片信息（cdrdao read-toc 解析）
-   │     rip.rs                   # 启动、驱动、取消 cyanrip
-   │     progress.rs              # '\r' 进度帧解析
-   │     logparse.rs              # EAC log → 结构化结果
-   │     event.rs                 # 事件枚举（UI 唯一输入）
-   │     job.rs                   # 任务/队列状态机
-   │     config.rs                # 配置读写与默认值
-   │     tag.rs                   # FLAC 标签与封面写入（metaflac）+ 归档/重命名
-   │     meta/
-   │       mod.rs                 # 元数据源抽象 + 优先级调度
-   │       musicbrainz.rs
-   │       acoustid.rs
-   │       discogs.rs
-   │       coverart.rs
-   └─ cyanrip-gui/                # bin，GTK4
+   │  ├─ src/
+   │  │  ├─ lib.rs
+   │  │  ├─ model.rs              # DiscInfo / TrackInfo / ProgressUpdate / RipReport
+   │  │  ├─ event.rs              # Event 枚举（UI 唯一输入）
+   │  │  ├─ disc.rs               # ioctl 读 TOC / MCN / 介质状态 / 弹出
+   │  │  ├─ rip.rs                # 启动、驱动、取消 cyanrip（tokio）
+   │  │  ├─ progress.rs           # '\r' 进度帧解析 + 单调钳制 + 倍速/ETA
+   │  │  ├─ logparse.rs           # EAC log → 结构化结果
+   │  │  ├─ config.rs             # config.toml / secrets.toml（0600）
+   │  │  ├─ tag.rs                # metaflac 写标签 + 归档/重命名 + cover.jpg
+   │  │  └─ meta/
+   │  │     ├─ mod.rs             # 候选结构 + resolve 链 + 打分
+   │  │     ├─ discid.rs          # MusicBrainz Disc ID（自实现）
+   │  │     ├─ musicbrainz.rs     # 按 discid 查，按 medium 分碟
+   │  │     ├─ discogs.rs         # 条码/关键字搜索、按 position 分碟、封面
+   │  │     ├─ acoustid.rs        # fpcalc 指纹（需 key）
+   │  │     ├─ cue.rs             # CUE 解析/生成（UTF-8/GBK）
+   │  │     └─ google.rs          # 图片搜索兜底（需 key + cx）
+   │  └─ tests/
+   │     ├─ rip_events.rs         # 假 cyanrip：流式事件与取消
+   │     └─ fixtures/             # 三份真实 log
+   ├─ cyanrip-cli/                # bin：probe / parse-log / rip / eject / match / tag
+   └─ cyanrip-gui/                # bin：GTK4
       └─ src/
-         main.rs                 # AdwApplication
-         state.rs                # AppState + Msg
-         ui/
-           window.rs             # HeaderBar / ViewStack / 队列侧栏
-           page_disc.rs          # 碟片 + 曲目表 + 快捷参数
-           page_settings.rs      # 完整设置页（五分类）
-           page_progress.rs
-           page_result.rs
-           page_meta.rs          # 未识别碟的手工/半自动匹配
-           log_view.rs
-           widgets/              # 模板预览、参数摘要条、轨道行
+         ├─ main.rs               # AdwApplication + 自测开关
+         ├─ state.rs              # AppState（含 secrets / 封面缓存 / 识别状态）
+         ├─ instance.rs           # 多实例登记（pid.lock）
+         ├─ i18n.rs               # gettext 初始化
+         └─ ui.rs                 # 全部界面与事件泵（单文件，约 2.9k 行）
 ```
 
-M4 增加 `crates/cyanrip-cli/`（同一 core 的无头入口，替代现有 `ripcd`）。
+安装产物（不在仓库里）：
 
----
+```
+~/.local/bin/cyanrip-frontend
+~/.local/bin/cyanrip-frontend-2          # 第二实例（独立配置）
+~/.local/bin/cyanrip-cli
+~/.local/share/applications/io.github.cyanrip.Frontend.desktop
+~/.local/share/icons/hicolor/scalable/apps/io.github.cyanrip.Frontend.svg
+```
 
 ## 4. 架构
 
@@ -142,49 +144,55 @@ M4 增加 `crates/cyanrip-cli/`（同一 core 的无头入口，替代现有 `ri
 
 ```
 ┌──────────────────────────────────────────┐
-│ cyanrip-gui (GTK 主线程)                  │
-│   AppState ⇄ Msg ⇄ 视图                   │
+│ cyanrip-gui（GTK 主线程）                 │
+│  AppState + 控件引用；100ms 定时器收事件   │
 └───────────────▲──────────────────────────┘
-                │ Event (async_channel)
+                │ Event（std::sync::mpsc）
 ┌───────────────┴──────────────────────────┐
-│ cyanrip-core (tokio)                     │
-│  Job ──► RipRunner ──► cyanrip 子进程     │
-│        └► MetaResolver ──► HTTP          │
-│        └► LogParser / ProgressParser      │
+│ cyanrip-core（独立线程里的 tokio runtime） │
+│  rip::run ──► cyanrip 子进程              │
+│  logparse / progress                     │
 └──────────────────────────────────────────┘
+
+旁路线程（都是 std::thread，结果走各自的 mpsc）：
+  元数据识别 / 封面下载 / 导出 CUE / 弹出托盘
 ```
 
-- UI 侧只处理 `Msg`（用户操作）与 `Event`（core 上报），不直接持有 tokio handle
 - core 不依赖 GTK，可用 `cargo test` 完全离线验证
+- GUI 不直接持有 tokio handle
 
 ### 4.2 并发与线程模型
 
-- GTK 主线程：`glib::MainContext`，只做 UI 更新
-- 后台：`tokio::runtime::Runtime`（multi-thread，默认 2 worker 足够）
-- 桥接：`async_channel::unbounded<Event>`；UI 用 `glib::MainContext::spawn_local` 消费
-- 子进程：`tokio::process::Command`，stdout/stderr 各一个 reader task
-- 进度节流：core 侧把 `\r` 帧归并到 ≤10 Hz 再发 `Event::Progress`，避免刷爆主循环
-- 禁止：`block_on`、在主线程做 HTTP、`std::process::Command::wait`
+- GTK 主线程只做界面；**用 `glib::timeout_add_local(100ms)` 轮询 `std::sync::mpsc`**，
+  不用 `spawn_local`（实现简单、易调试）
+- 每次抓轨：起一个 `std::thread`，里面建 2 worker 的 tokio runtime，`rip::run` 的
+  `async_channel<Event>` 再转发到同步 mpsc
+- 进度节流：core 把 `\r` 帧归并到 ≤10 Hz；进度帧只发 `Event::Progress`，**不进日志**
+- HTTP（MB/Discogs/AcoustID/Google/封面）在普通线程里同步执行，结果经 mpsc 回主线程
+- 禁止：GTK 主线程上做 `std::process::Command::output()`（弹出托盘曾因此假死，见 §14.1）
 
 ### 4.3 取消语义
 
 ```
-用户点取消 → 二次确认 → Event::CancelRequested
-  → core 向子进程发 SIGTERM，2s 后 SIGKILL
-  → 删除"抓取中"轨的残片（*.flac.part / 半成品）
-  → 已完成轨保留，Job 置 PartialDone，结果页标黄
+用户点取消 → core 的 watch 置 true → child.kill()（SIGKILL）
+  → 已解析出的部分结果保留
+  → 发 Event::Cancelled { completed_tracks }
+  → UI 回碟片页，已完成轨的文件留在输出目录
 ```
 
-`-Z 2` 模式下已完成的校验结果不丢失；日志尾部追加 `cancelled by user at track N`。
+- `-Z` 多遍校验的中间结果不丢
+- 没有单独的 `PartialDone` 状态：UI 侧只有 Idle / Ripping / Done / Failed
 
 ### 4.4 状态机
 
 ```
-Idle → ProbingDisc → DiscReady → Ripping → Verifying(解析log) → Done
-                        │            │
-                        │            └→ Cancelled / Failed
-                        └→ NoMedium（无碟/换碟）→ 轮询等待
+Idle ──探测成功──► (DiscReady) ──开始──► Ripping ──完成──► Done
+  ▲                    │                    │
+  └── 弹出/换碟/失败 ◄──┴────────────────────┴──► Failed
 ```
+
+- 碟片信息、识别状态、封面、勾选各自有独立字段，不塞进单一状态机
+- 识别用 `meta_pending` 标志；抓轨前若还在识别，等它结束（≤15s）
 
 ---
 
@@ -196,101 +204,113 @@ Idle → ProbingDisc → DiscReady → Ripping → Verifying(解析log) → Done
 enum Event {
     DiscProbed(DiscInfo),
     DiscRemoved,
-    TrackStarted { index: u32, title: String },
-    Progress { track: u32, track_pct: f32, overall_pct: f32, speed_x: f32, eta: Duration },
-    LogLine(String),                 // 原始行，供日志面板
-    TrackDone { index: u32, crc: Option<u32>, ar: ArStatus },
-    RipFinished(RipReport),
+    TrackStarted { index: u32, title: Option<String> },
+    Progress(ProgressUpdate),          // 已节流 ≤10Hz
+    LogLine(String),                   // 已按 \r 拆分，不含进度帧
+    TrackDone(TrackResult),
+    RipFinished { report: RipReport, log_path: Option<PathBuf> },
     RipFailed { stage: Stage, message: String },
-    MetaResolved(MetaCandidate),
-    MetaFailed(String),
+    Cancelled { completed_tracks: Vec<u32> },
 }
 ```
 
 ### 5.2 关键结构
 
-- `DiscInfo { device, model, firmware, disc_id, cddb_id, tracks: Vec<TrackInfo>, total_duration, ar_in_db: bool, isrcs: Vec<Option<String>> }`
-- `TrackInfo { number, start_lsn, duration, title: Option<String>, selected: bool }`
-- `ArStatus { v1: Option<u32>, v2: Option<u32>, confidence: Option<u8>, state: InDb | NotFound | Mismatch }`
-- `RipReport { offset: i32, c2_supported: bool, paranoia_level: u8, tracks: Vec<TrackResult>, errors: u32, started_at, finished_at, log_path }`
-- `Settings { device, offset, speed, paranoia, retries, verify_passes, overread, use_c2, output…, meta…, behavior… }`
+- `DiscInfo { device, vendor, model, firmware, tracks: Vec<TrackInfo>, leadout_lsn, total_frames,
+  disc_id, cddb_id, mcn, ar_in_db }`
+- `TrackInfo { number, start_lsn, duration_frames, is_audio, title, isrc }`
+- `ProgressUpdate { track, track_pct, overall_pct, eta, speed_x, elapsed }`
+- `TrackResult { number, crc32, ar_v1, ar_v2, ar_confidence, ar_state, duration }`
+- `RipReport { offset, c2_supported, paranoia_level, disc_tracks, tracks_ripped, tracks_accurate,
+  errors, total_time, ar_id, ar_found, disc_id, cddb_id, mcn, tracks, log_path }`
+- `MetaRelease { source, id, title, artist, date, country, label, catno, barcode, tracks,
+  disc_number, disc_total, cover_url, score }`
 
 ### 5.3 配置文件
 
-`~/.config/cyanrip-frontend/config.toml`
+`~/.config/cyanrip-frontend/config.toml`（`CYANRIP_GUI_CONFIG` 可覆盖；第二实例用 `second.toml`）
 
 ```toml
 [device]
 path = "/dev/sr0"
-# 按设备型号记忆偏移，换光驱自动匹配
-offsets = { "PIONEER DVD-RW DVR-106D" = 48 }
+offsets = { "DVD-RW  DVR-106D" = 48, "DVD-ROM DVD-106" = 500 }   # 按型号记忆
+speed = 0
 
 [rip]
 paranoia = 3
 retries = 10
-verify_passes = 2      # -Z
+verify_passes = 2          # -Z
 overread = false
-use_c2 = false         # 本机驱动不支持 C2
-formats = ["flac"]     # 可多选并行编码
+formats = ["flac"]
 image_mode = false
+bitrate = 320
 
 [output]
-root = "~/Music"
+root = "/home/ngok/Music"
 dir_template = "{artist}/{album}"
 file_template = "{track:02} {title}"
 log_template = "{album}"
 write_cue = true
 embed_cover = true
 replaygain = true
+skip_data_tracks = false
 
 [meta]
 priority = ["musicbrainz", "acoustid", "discogs"]
+cover_sources = ["musicbrainz", "discogs", "google"]   # 空数组 = 不刮封面
 language = "zh"
 cover_max_px = 1200
 
 [behavior]
 auto_tag_after_rip = true
 eject_when_done = true
-notify = true                 # 桌面通知
-sound = true                  # 抓完播放提示音
-sound_theme = "complete"      # freedesktop 主题音（canberra-gtk-play -i）
-sound_file = ""               # 非空则播放自定义音频（canberra -f，回退 pw-play）
-shutdown_when_done = false    # 抓完关机，默认关，开启需二次确认
-on_error = "continue"         # continue | abort
-unknown_disc = "pause"        # pause（等待人工指定）| rip_placeholder（按 Unknown CD 落盘）
+notify = true
+sound = true
+sound_theme = "complete"    # canberra-gtk-play -i
+sound_file = ""             # 非空则 -f
+shutdown_when_done = false
+on_error = "continue"
+unknown_disc = "pause"
 
 [ui]
-language = "zh"               # 本阶段只打包 zh，其余语言留接口
+language = "zh"
+
+[advanced]
+bin = "cyanrip"
+extra_args = ""
 ```
 
-密钥单独存放：`~/.config/cyanrip-frontend/secrets.toml`（0600），只存 Discogs token。
+密钥单独存放：`~/.config/cyanrip-frontend/secrets.toml`（0600）：
+`discogs_token`、`google_api_key`、`google_cx`。
 
 ---
 
 ## 6. GUI 参数 → cyanrip 参数映射
 
-| 界面项 | cyanrip 参数 | 备注 |
-|---|---|---|
-| 设备 | `-d /dev/sr0` | 自动枚举 `/dev/sr*` |
-| 读偏移 | `-s 48` | 必须显式；按设备记忆 |
-| 速度 | `-S N` | 本机报 "Device does not support changing speeds!"，UI 需容忍 |
-| Paranoia | `-P 0..3` | 默认 3 |
-| 帧重试 | `-r N` | 默认 10 |
-| 校验次数 | `-Z N` | 默认 2（≈3 遍读取） |
-| Overread | `-O` | 提示风险 |
-| C2 | （cyanrip 自动） | 本机不支持，设置页只做说明与告警 |
-| 格式 | `-o flac,mp3` | 多格式并行编码 |
-| 目录模板 | `-D` | 自定义变量映射 |
-| 文件模板 | `-F` | |
-| 日志名 | `-L` | |
-| CUE 名 | `-M` | |
-| 选轨 | `-l 1,3-5` | |
-| 专辑/曲目元数据 | `-a album=…:album_artist=…`、`-t n=title=…` | 未命中 MB 时使用 |
-| MB 发行版 | `-R <index|id>` | |
-| 跳过元数据 | `-N` | 未识别碟 |
-| 采集/HDCD 等 | `-H` `-E` `-W` `-K` `-X` `-p` | 高级分页 |
+实际拼装顺序（`build_cyanrip_args`）：
+`-Z N -P N -r N -o fmt -N [-O] [-H] [-a ...] [-D ...] [-t n=title=...]... [-l 1,3-5]`
 
-参数摘要条实时拼出等价命令行，可复制。
+| 界面项 | cyanrip 参数 | 状态 |
+|---|---|---|
+| 设备 | `-d /dev/sr0` | ✅ 已用（`RipOptions.device`） |
+| 读偏移 | `-s 48` | ✅ 已用；按光驱型号记忆，未知时不允许开抓 |
+| 校验次数 | `-Z N` | ✅ 默认 1（设置页可调 0–3） |
+| Paranoia | `-P 0..3` | ✅ 默认 3 |
+| 帧重试 | `-r N` | ✅ 默认 10 |
+| 格式 | `-o flac` / `flac,wav` / `wav` | ✅ 三选一 |
+| Overread | `-O` | ✅ 开关 |
+| HDCD | `-H` | ✅ 碟片页复选框（cyanrip 不自动检测） |
+| 跳过内建元数据 | `-N` | ✅ 始终传（元数据由我们提供） |
+| 专辑元数据 | `-a artist=…:album=…:date=…:label=…:catalog_number=…:barcode=…[:disc=…:totaldiscs=…]` | ✅ 来自当前候选 |
+| 曲目元数据 | `-t n=title=…`（逐轨） | ✅ 来自当前候选 |
+| 套装分目录 | `-D "{album} CD{disc} [{format}]"` | ✅ 仅 `disc_total > 1` |
+| 选轨 | `-l 1,3-5` | ✅ 仅当不是全选 |
+| 速度 | `-S N` | ⬜ 设置项存在但未接线（本机驱动也不支持变速） |
+| 目录/文件/日志/CUE 模板 | `-D/-F/-L/-M` | ⬜ 未接线：归档路径目前固定 `艺人/专辑/`，文件名 `NN 曲名`（套装加 `CDn-` 前缀） |
+| MB 发行版序号 | `-R` | ⬜ 未使用（我们自己解析候选，不走 cyanrip 的元数据） |
+| de-emphasis / C2 / 数据轨 | `-E/-W/-X` | ⬜ 未接线，设置页只有说明 |
+
+> 待办：把 `dir_template/file_template` 真正接到 `-D/-F`，或明确从设置页移除（避免"界面一套、实际一套"）。
 
 ---
 
@@ -354,12 +374,12 @@ language = "zh"               # 本阶段只打包 zh，其余语言留接口
   所有动态标题的 ActionRow 必须显式 `.use_markup(false)`
 - **介质轮询**：每 1.5 秒查 `CDROM_DRIVE_STATUS`，换碟/收回托盘后自动重新探测并刷新列表；抓轨期间暂停轮询
 
-### 7.2 设置页（五分类，独立页面而非弹窗）
+### 7.2 设置页（六个分组，单页滚动）
 
-左侧分类列表，右侧 `AdwPreferencesPage` 滚动表单：
+单个 `AdwPreferencesPage`，按 `AdwPreferencesGroup` 分组：
 
 1. **设备与驱动**：设备、偏移（+自动检测）、速度、Paranoia、重试、`-Z`、overread、C2 说明
-2. **输出**：根目录（**目录选择器**，不手打路径）、四个模板（含实时预览）、格式多选、image 模式、CUE/log/封面/ReplayGain/HDCD/de-emphasis/数据轨
+2. **输出**：根目录（**目录选择器**，不手打路径）、目录/文件/日志/CUE 模板（**仅存储，尚未接到 cyanrip**）、格式三选一、image 模式、CUE/封面/ReplayGain/数据轨开关
 3. **元数据**：源优先级（可拖动）、**Discogs access token（掩码输入，存 `secrets.toml` 0600，
    不写进 config.toml；首次会从旧的 `~/.config/discogs/token` 回填）**、**Google API Key + CX
    （封面兜底，同样存 secrets.toml）**、**封面刮削器多选（MusicBrainz / Discogs / Google，
@@ -372,8 +392,7 @@ language = "zh"               # 本阶段只打包 zh，其余语言留接口
 
 - **显式保存**：改动只标记为"未保存"（状态行 + 保存按钮可用），点保存才原子写 `config.toml`；探测/换碟不会顺手把未保存改动写盘
 - **能选就不打字**：路径类用 `GtkFileDialog` 选目录；提示音从 `/usr/share/sounds/freedesktop/stereo` 里存在的事件名生成下拉（36 个），并带「试听」按钮，避免手打名字写错导致没声音
-- 抓轨中修改会生效于下一次的项，显示 `下一张生效` 徽标
-- 每项右侧 `ⓘ` 说明代价（如 `-Z 2` 时间翻倍）
+- 抓轨中改设置不会影响正在进行的这次抓轨，保存后下一次生效（没有单独的徽标，靠状态行提示）
 
 ### 7.3 进度页
 
@@ -415,25 +434,31 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 曲目明细
 轨   时长    EAC CRC32   AR v1      AR v2      conf  状态
 01   3:18    01834C83    6F096812   17AF569B   8     精确命中
-16   3:14    364B3C50    E4F505C0   2CAF18F0   —     未入库
+13   2:52    A1B2C3D4    —          —          —     未入库（不同压片）
 ```
 
 - 状态列带颜色：精确命中（绿）/ 未入库（黄）/ 不一致（红）/ 无数据（灰）
 - CRC、AR、时长用等宽字体；所有值可选中复制
 - 操作：打开输出目录、复制日志
 
-### 7.5 元数据页（未识别碟）
+### 7.5 未识别碟（CUE 导入）
 
-- MB 命中：直接展示发行版列表，选版本 → 预览曲目映射 → 应用
-- 未命中：AcoustID 候选（带 score/时长）+ 条码输入 + Discogs 搜索（结果含国家/年份/厂牌/格式）
-- 选定后展示"碟轨 → Discogs 轨"的对应表，允许手工调整，再写标签
+没有独立的"元数据页"——识别结果直接落在碟片页的候选下拉里：
+
+- 自动识别失败时，标签显示「未识别 · 没有匹配（可导入 CUE 或换 token）」
+- 点「导入曲目信息」选 CUE：解析 PERFORMER / TITLE / REM DATE / DISCNUMBER / TOTALDISCS /
+  CATALOG / 逐轨 TITLE（UTF-8 或 GBK），作为**最高优先级候选**插入并选中
+- 选中后曲目表立刻显示 CUE 里的曲名，抓轨与归档都用它
+- 网络识别结果稍后返回时不会顶掉 CUE 候选
 
 ### 7.6 国际化（i18n）与完成提示
 
 **i18n 架构（中文先行，接口留全）**
 
-- 所有用户可见字符串走 `gettext-rs`（gettext 与 GTK 生态一致），源码里不出现裸中文字面量；日志与 cyanrip 原始输出不翻译
-- 随包只带 `po/zh_CN.po`；`LANG` 或设置项决定语言，缺翻译时回退 msgid（英文原文），不出现空白界面
+- 所有用户可见字符串走 `gettext-rs` 的 `tr()`；**msgid 就是中文原文**（`tr("开始抓轨")`），
+  没有 `.mo` 时原样返回，所以中文界面开箱即用
+- 目前**没有随包带 `.po/.mo`**；要加语言时补 `po/en.po`（msgid 为中文）+ 编译 `.mo` 即可，不改代码
+- 日志与 cyanrip 原始输出不翻译
 - 数字、时长、日期统一走格式化函数（`chrono` + 本地化），禁止在 UI 代码里手工拼 `{}分{}秒`
 - 先定一份领域词表（抓轨 / 校验 / 读偏移 / 压片 / 命中），保证后续翻译一致
 - 新增语言 = 加一个 `po/<lang>.po`，不改代码；M4 用 `en` 目录验证机制本身
@@ -451,7 +476,7 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 ### 7.7 图标与桌面项
 
 - 应用 id：`io.github.cyanrip.Frontend`
-- 图标：`assets/io.github.cyanrip.Frontend.svg`（CD + 抓轨箭头），装到
+- 图标：`assets/io.github.cyanrip.Frontend.svg`（银色 CD + 叠在盘面下缘的灰色 RIP 字样），装到
   `~/.local/share/icons/hicolor/scalable/apps/`，名字与 app id 一致
 - 桌面项文件名必须等于 app id（`io.github.cyanrip.Frontend.desktop`），
   否则 GNOME 在 Wayland 下找不到窗口对应的入口，任务栏会显示通用图标
@@ -538,14 +563,14 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 
 | 场景 | 处理 |
 |---|---|
-| 无碟 / 换碟（`No medium found`） | 回到 `NoMedium` 状态，3s 轮询，不弹错误框 |
+| 无碟 / 换碟（`No medium found`） | 清空碟片页（曲目/元数据/封面/HDCD），1.5s 轮询，不弹错误框 |
 | 驱动报 media changed | 中止当前碟，保留已完成轨，提示重新放入 |
 | 驱动不响应 / 超时 | 中止 + 建议重插/重启驱动，保留日志 |
 | 磁盘空间不足 | 开抓前按"轨数 × 轨长 × 176.4KB × 格式系数"预估并校验 |
-| 网络失败 | 元数据降级，不阻塞抓轨；结果页可"重试识别" |
+| 网络失败 | 元数据降级，不阻塞抓轨；碟片页点「刷新」重试；Discogs 401 自动转匿名 |
 | Discogs 限速 | 客户端令牌桶（未认证 25/min，认证 60/min）+ 响应缓存 |
 | cyanrip 版本过旧（<0.9.4） | 启动时检测并在设置页警告（已知 media-check 性能 bug） |
-| 用户取消 | SIGTERM→SIGKILL，清理残片，标记 PartialDone |
+| 用户取消 | `watch` 置位 → `child.kill()`（SIGKILL）；保留已完成轨与部分解析结果，发 `Cancelled` 事件 |
 | 输出目录不可写 | 开始前预检 + 明确报错 |
 
 ---
@@ -553,15 +578,22 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 ## 10. 测试策略
 
 1. **core 单测（离线）**
-   - `progress.rs`：喂真实 `\r` 片段，断言事件序列与节流
+   - `progress.rs`：真实 `\r` 片段 → 事件序列、单调钳制、倍速/ETA
    - `logparse.rs`：三份真实 log（Quartet 13/13、花儿 CD1 15/16、花儿 CD2 8/8）断言 offset、AR、CRC、错误数
-   - `config.rs`：默认值、迁移、损坏文件回退
-   - `meta/*`：录制 JSON 快照，断言匹配算法与容差
-2. **GUI 冒烟**：`GDK_BACKEND=headless` 或 `weston --headless` 启动，检查页面构建无 panic
+   - `config.rs`：默认值、损坏文件回退、secrets 0600
+   - `meta/*`：discid 对照真值；MB 套装按 medium 选碟；Discogs position 分碟；CUE 解析/生成往返；GBK 解码
+   - `tag.rs`：文件名清理、FLAC 完整性校验
+2. **GUI 自测**（`CYANRIP_GUI_*`，见 §16）
+   - `SMOKE`：构建 + 探测不崩
+   - `SELFTEST`：保存流程、全选、设备下拉、封面刮削器多选、token 落盘（0600）
+   - `AUTORIP` / `AUTOAPPLY`：界面驱动的单轨抓轨 + 自动归档，与命令行逐位一致
+   - `EJECTTEST`：弹出后状态清空、托盘可收回
 3. **真碟验收**（本机）
-   - 已知碟：久石譲 Quartet（AR 13/13 conf 8）→ 结果页数字须与命令行一致
-   - 未知碟：花儿乐队 CD1（MB/CDDB 均无）→ 走人工匹配路径
-4. **回归**：每次发版前跑一遍 `cargo test` + 上述真碟
+   - 久石譲 Quartet（AR 13/13 conf 8）→ 与命令行逐位一致
+   - 花儿乐队 2CD（MB 无压片）→ MCN/Discogs + CUE 兜底
+   - Paganini 双碟套装 → 两台光驱并发，曲目/碟号/目录不串
+   - Reference Recordings RR-907CD → HDCD 勾选后 24-bit 输出
+4. **回归**：`cargo test`（core 40 + 集成 2 + GUI 1）+ `clippy --all-targets` 零警告
 
 ---
 
@@ -569,18 +601,18 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 
 ### M1 — 工程骨架与 core（已完成）
 - workspace、crate 划分、CI 脚本（`cargo fmt/clippy/test`）
-- `disc.rs`（cdrdao TOC 解析）、`progress.rs`、`logparse.rs` + 三份 fixture 单测
+- `disc.rs`（ioctl 读 TOC）、`progress.rs`、`logparse.rs` + 三份 fixture 单测
 - `rip.rs` 最小实现：启动 cyanrip、收集事件、日志落盘
-- 验收：`cargo test` 全绿；CLI 示例可跑完一张碟并打印结构化结果
+- 验收：`cargo test` 全绿；CLI 可跑完一张碟并打印结构化结果
 
 ### M2 — GUI 五页成形（已完成）
 - 主窗口、HeaderBar、ViewStack
-- 碟片页（设备、碟片信息、曲目表、勾选、快捷参数）
-- 设置页（五分类完整实现 + 模板预览 + 参数摘要条）
+- 碟片页（设备下拉、碟片信息、曲目表、勾选）
+- 设置页（设备/输出/元数据/行为/高级/应用 六组，显式保存）
 - 进度页（双进度、速度、日志、取消）
 - 结果页（AR 表、CRC、操作按钮）+ 完成提示音（canberra，可关闭）
-- i18n 骨架：所有可见字符串走 gettext，初始化 `po/zh_CN.po`
-- 验收：真碟（Quartet）全程鼠标操作完成抓轨，结果与命令行一致；切换 `LANG` 不出现空白文案
+- i18n 骨架：所有可见字符串走 `tr()`（msgid 为中文）
+- 验收：真碟（Quartet）界面完成抓轨，结果与命令行一致
 
 ### M3 — 元数据与标签（已完成，2026-11-07）
 
@@ -588,8 +620,8 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 - `meta::discid`：自行实现 MusicBrainz Disc ID（SHA-1 + libdiscid 的 base64 变体），
   单测直接对照 cyanrip 日志里的真实 ID `kC9g0ZX9IMTELLEHE.ETxsZyaMg-`
 - `meta::musicbrainz`：按 discid 查发行版（含曲目时长）
-- `meta::discogs`：按条码搜索、取发行版详情（曲目、厂牌、目录号、封面），token 读
-  `~/.config/discogs/token` 或 `CYANRIP_DISCOGS_TOKEN`
+- `meta::discogs`：按条码搜索、取发行版详情（曲目、厂牌、目录号、封面）；token 依次取
+  `CYANRIP_DISCOGS_TOKEN` → 设置里的 `secrets.toml` → 旧的 `~/.config/discogs/token`
 - `meta::acoustid`：`fpcalc` 指纹 + AcoustID 查询（需 `CYANRIP_ACOUSTID_KEY`）
 - `disc::probe` 增加 MCN 读取（`CDROM_GET_MCN`）——很多商业碟的 MCN 就是条码
 - 解析顺序：MB(discid) → Discogs(MCN/条码) → AcoustID+Discogs(关键字)，按轨数/时长打分
@@ -641,15 +673,18 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 - 封面优先 Discogs primary 图；MB 候选走 Cover Art Archive
 
 ### M4 — 打磨与扩展（进行中）
-- ✅ 应用图标与桌面项（app-id 对齐）
-- ✅ 多实例（两台光驱并行）+ 独立配置 + 关机互斥
-- ✅ 封面（三级兜底、多选刮削器、内嵌 + 目录存图）
-- ✅ CUE 导入 / 导出（含封面）
-- ✅ HDCD 用户勾选解码
-- ⬜ 队列 / 自动换碟 / 失败重试
-- ⬜ 取消语义完善、错误页细化
-- ⬜ 多语言验证（`po/en.po`）、快捷键
-- ⬜ 可选 flatpak 打包
+
+已完成的打磨项：应用图标与桌面项、多实例、封面三级兜底与多选、CUE 导入/导出、HDCD 勾选。
+
+剩余待办：
+
+- 失败重试（单轨/整碟）
+- 取消语义细化（区分"用户取消"与"驱动错误"）
+- 设置项接线：`-S` 速度、`-D/-F/-L/-M` 模板（或从界面移除）
+- 多语言验证（`po/en.po`）、快捷键
+- 可选 flatpak 打包
+
+> **队列 / 自动换碟：不做**（2026-11-07 决定）。并行需求用多实例 + 两台光驱解决（§7.8）。
 
 ---
 
@@ -672,10 +707,10 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 
 | 事项 | 决定 |
 |---|---|
-| 队列 / 多碟 | 保持排在 **M4**，M2 只做单碟 |
+| 队列 / 自动换碟 | **不做**（2026-11-07 决定）。并行抓轨改由多实例 + 双光驱实现（§7.8），单碟套装已支持分碟 |
 | 抓轨以外的自动化 | 暂不考虑，留作以后扩展。**保留"抓完关机"**（默认关）；**新增"抓完播放提示音"开关**，M2 实现（canberra 主题音 / 自定义文件） |
-| 界面语言 | 先做**中文**；所有用户可见字符串从 M2 起走 gettext 通道，新增语言只需加 `po/<lang>.po`，M4 用 `en` 验证机制 |
-| `ripcd` | **保留**作为过渡工具，M4 的 `cyanrip-cli` 与它并存，不删除 |
+| 界面语言 | 先做**中文**；字符串走 gettext 的 `tr()`（msgid 为中文），新增语言需补 `po/<lang>.po` 并编译 `.mo`，未随包 |
+| `ripcd` | **保留**作为轻量无头工具；`cyanrip-cli` 已实现（probe/parse-log/rip/eject/match/tag），两者并存 |
 
 ---
 
@@ -710,7 +745,8 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 
 - 工具链：rustup + rustc/cargo 1.99.1；`libgtk-4-dev` / `libadwaita-1-dev` 已安装（GTK 4.14.5 / Adw 1.5）
 - 代码：`cyanrip-core`（model / event / disc / progress / logparse / rip / config）+ `cyanrip-cli`
-- 测试：22 个单测 + 2 个集成测试（假 cyanrip 的流式事件与取消路径），全部通过；`cargo clippy --all-targets` 零警告
+- 测试：**当时** 22 个单测 + 2 个集成测试（假 cyanrip 的流式事件与取消路径）全部通过；clippy 零警告
+  （当前累计：core 40 + 集成 2 + GUI 1）
 - 真机验证：
   - `probe` 在空仓时正确返回"光驱中没有碟片"，不 panic
   - `parse-log` 对三份真实日志输出与 cyanrip 原始结果一致（Quartet 13/13、花儿 CD1 15/16、CD2 8/8）
@@ -802,11 +838,14 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 
 ### M4 — 剩余工作
 
-- 队列 / 自动换碟 / 失败重试
-- 取消语义完善、错误页细化
+- 失败重试（单轨/整碟）
+- 取消语义细化、错误页细化
+- 设置项接线：`-S` 速度、`-D/-F/-L/-M` 模板（或从界面移除）
 - 多语言验证（`po/en.po`）、快捷键
 - 可选 flatpak 打包
 - 可选：HDCD 自动检测（读 60s + ffmpeg 分析，命中自动勾选）
+
+> **队列 / 自动换碟已取消**，不再列为待办。
 ---
 
 ---
@@ -842,6 +881,7 @@ CYANRIP_GUI_STANDALONE=1 CYANRIP_GUI_SELFTEST=1 ./target/debug/cyanrip-frontend
 
 | commit | 日期 | 说明 |
 |---|---|---|
+| `fe5e36e` | 11-07 | docs: fold all changes since M3 into the project plan |
 | `40fc42f` | 11-07 | disc page: user-controlled HDCD decoding checkbox (-H) |
 | `4b9efb4` | 11-07 | ui: disable markup on track rows (ampersand titles rendered blank) |
 | `d88ee17` | 11-07 | eject: run off the main thread and clear all disc UI state |
@@ -887,4 +927,4 @@ CYANRIP_GUI_STANDALONE=1 CYANRIP_GUI_SELFTEST=1 ./target/debug/cyanrip-frontend
 | `47ae591` | 11-07 | M1 verified on real disc: fix CDROMREADTOCHDR ioctl, monotonic multi-pass progress, sane speed/ETA |
 | `cd8423a` | 11-07 | M1: cyanrip-core + cyanrip-cli (TOC probe, progress/log parsing, rip orchestration) |
 
-> 更详细的功能验收记录见 §15（M1/M2/M3/M3.5），踩坑见 §14.1。
+> 功能验收记录见 §15，踩坑见 §14.1；本文档最后一次整体校对：2026-11-07（与 HEAD 对齐）。
