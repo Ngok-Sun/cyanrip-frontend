@@ -75,6 +75,12 @@ fn main() -> glib::ExitCode {
             let st2 = state.clone();
             let app2 = app.clone();
             glib::timeout_add_local(std::time::Duration::from_millis(400), move || {
+                // 全选 / 取消全选
+                ui2.select_all.set_active(false);
+                let all_off = st2.borrow().selected.iter().all(|x| !*x);
+                ui2.select_all.set_active(true);
+                let all_on = st2.borrow().selected.iter().all(|x| *x);
+
                 let original = st2.borrow().settings.rip.verify_passes;
                 let initial_disabled = !ui2.save_btn.is_sensitive();
                 ui2.verify_spin.set_value((original + 1) as f64);
@@ -89,7 +95,7 @@ fn main() -> glib::ExitCode {
                 ui2.save_btn.emit_clicked();
                 let clean = !st2.borrow().dirty && !ui2.save_btn.is_sensitive();
                 println!(
-                    "SELFTEST initial_disabled={initial_disabled} dirty={dirty} saved={saved} clean_after_save={clean}"
+                    "SELFTEST initial_disabled={initial_disabled} dirty={dirty} saved={saved} clean_after_save={clean} all_off={all_off} all_on={all_on}"
                 );
                 app2.quit();
                 glib::ControlFlow::Break

@@ -29,6 +29,9 @@ pub struct Ui {
     pub detect_btn: gtk::Button,
     pub offset_spin: gtk::SpinButton,
     pub disc_summary: gtk::Label,
+    pub select_all: gtk::CheckButton,
+    pub track_checks: RefCell<Vec<gtk::CheckButton>>,
+    pub syncing_selection: RefCell<bool>,
     pub track_list: gtk::ListBox,
     pub start_btn: gtk::Button,
     // 进度页
@@ -105,6 +108,12 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
     disc_summary.set_xalign(0.0);
     disc_summary.add_css_class("title-4");
 
+    let select_all = gtk::CheckButton::with_label(&tr("全选"));
+    select_all.set_active(true);
+    select_all.set_tooltip_text(Some(&tr("全选 / 取消全选")));
+    let select_row = gtk::Box::new(Orientation::Horizontal, 6);
+    select_row.append(&select_all);
+
     let track_list = gtk::ListBox::new();
     track_list.set_selection_mode(gtk::SelectionMode::None);
     track_list.add_css_class("boxed-list");
@@ -120,6 +129,7 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
     disc_page.set_margin_end(12);
     disc_page.append(&device_box);
     disc_page.append(&disc_summary);
+    disc_page.append(&select_row);
     disc_page.append(&track_scroll);
 
     // ---------- 进度页 ----------
@@ -236,6 +246,9 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
         detect_btn,
         offset_spin,
         disc_summary,
+        select_all,
+        track_checks: RefCell::new(Vec::new()),
+        syncing_selection: RefCell::new(false),
         track_list,
         start_btn,
         progress_title,
@@ -484,6 +497,29 @@ fn connect_signals(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
             let _ = &ui2;
         });
     }
+    // 全选 / 取消全选
+    {
+        let ui2 = ui.clone();
+        let st = state.clone();
+        ui.select_all.connect_toggled(move |c| {
+            if *ui2.syncing_selection.borrow() {
+                return;
+            }
+            let active = c.is_active();
+            {
+                let mut s = st.borrow_mut();
+                for v in s.selected.iter_mut() {
+                    *v = active;
+                }
+            }
+            *ui2.syncing_selection.borrow_mut() = true;
+            for cb in ui2.track_checks.borrow().iter() {
+                cb.set_active(active);
+            }
+            *ui2.syncing_selection.borrow_mut() = false;
+            ui2.select_all.set_inconsistent(false);
+        });
+    }
     // 开始 / 取消
     {
         let ui2 = ui.clone();
@@ -702,6 +738,7 @@ pub fn probe_disc(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
             drop(st);
             ui.offset_spin.set_value(offset as f64);
             refresh_disc(ui, state);
+            sync_select_all(ui, state);
             ui.start_btn.set_sensitive(true);
         }
         Err(e) => {
@@ -783,11 +820,30 @@ fn parse_offset_output(text: &str) -> Option<i32> {
     rest[..end].trim().parse().ok()
 }
 
+/// 根据逐轨勾选情况同步"全选"三态。
+fn sync_select_all(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
+    if *ui.syncing_selection.borrow() {
+        return;
+    }
+    let (all, none) = {
+        let st = state.borrow();
+        (
+            st.selected.iter().all(|x| *x),
+            st.selected.iter().all(|x| !*x),
+        )
+    };
+    *ui.syncing_selection.borrow_mut() = true;
+    ui.select_all.set_inconsistent(!all && !none);
+    ui.select_all.set_active(all);
+    *ui.syncing_selection.borrow_mut() = false;
+}
+
 /// 刷新碟片摘要与曲目表。
 pub fn refresh_disc(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
     while let Some(child) = ui.track_list.first_child() {
         ui.track_list.remove(&child);
     }
+    ui.track_checks.borrow_mut().clear();
     let st = state.borrow();
     let Some(info) = &st.disc else {
         ui.disc_summary.set_text(&tr("尚未探测碟片"));
@@ -816,12 +872,17 @@ pub fn refresh_disc(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
         row.set_activatable(false);
 
         let st2 = state.clone();
+        let ui2 = ui.clone();
         check.connect_toggled(move |c| {
-            let mut s = st2.borrow_mut();
-            if i < s.selected.len() {
-                s.selected[i] = c.is_active();
+            {
+                let mut s = st2.borrow_mut();
+                if i < s.selected.len() {
+                    s.selected[i] = c.is_active();
+                }
             }
+            sync_select_all(&ui2, &st2);
         });
+        ui.track_checks.borrow_mut().push(check);
         ui.track_list.append(&row);
     }
 }
