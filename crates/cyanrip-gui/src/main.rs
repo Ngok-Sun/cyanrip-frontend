@@ -255,7 +255,7 @@ fn main() -> glib::ExitCode {
                     .start_btn
                     .parent()
                     .and_then(|p| p.parent())
-                    .map(|p| p.type_().name().to_string() == "GtkHeaderBar")
+                    .map(|p| p.type_().name() == "GtkHeaderBar")
                     .unwrap_or(false);
                 let app_icon_ok = gtk::gdk::Display::default()
                     .map(|d| {
