@@ -79,10 +79,16 @@ fn match_cmd(args: &[String]) -> Result<()> {
         return Ok(());
     }
     for (i, r) in rels.iter().enumerate() {
+        let disc = if r.disc_total > 1 {
+            format!(" CD{}/{}", r.disc_number, r.disc_total)
+        } else {
+            String::new()
+        };
         println!(
-            "[{i}] {} — {} ({}, {}) score={}%  {}/{}  tracks={}",
+            "[{i}] {} — {}{} ({}, {}) score={}%  {}/{}  tracks={}",
             r.artist,
             r.title,
+            disc,
             r.date.clone().unwrap_or_default(),
             r.country.clone().unwrap_or_default(),
             r.score,

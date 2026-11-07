@@ -51,6 +51,12 @@ pub fn apply(
     if files.is_empty() {
         bail!("没有可写标签的文件");
     }
+    // 套装：以发行版解析出的碟号为准（调用方传的 (1,1) 只是单碟默认值）
+    let disc = if release.disc_total > 1 {
+        (release.disc_number.max(1), release.disc_total)
+    } else {
+        disc
+    };
     let artist = sanitize(&release.artist);
     let album = sanitize(&release.title);
     let dest_dir = if artist.is_empty() || artist == "未命名" {
@@ -77,6 +83,10 @@ pub fn apply(
         if src != &dest {
             if dest.exists() {
                 bail!("目标文件已存在：{}", dest.display());
+            }
+            // 抓轨刚结束时文件可能还在写：不是 FLAC 就拒绝搬动
+            if !is_complete_flac(src) {
+                bail!("文件不完整（可能还在写入）：{}", src.display());
             }
             if std::fs::rename(src, &dest).is_err() {
                 std::fs::copy(src, &dest).context("复制文件失败")?;
@@ -178,6 +188,39 @@ fn write_tags(
 
 /// 在输出根目录下找最近一次抓轨产生的目录（含 .flac 的目录）。
 /// 输出根目录下所有含 FLAC 的子目录
+/// 文件头是不是 "fLaC"，并且不是空文件
+pub fn is_complete_flac(path: &Path) -> bool {
+    use std::io::Read;
+    let Ok(mut f) = std::fs::File::open(path) else {
+        return false;
+    };
+    let mut magic = [0u8; 4];
+    if f.read_exact(&mut magic).is_err() {
+        return false;
+    }
+    let len = f.metadata().map(|m| m.len()).unwrap_or(0);
+    &magic == b"fLaC" && len > 1024
+}
+
+/// 目录里的 rip 日志是否属于指定 DiscID
+pub fn dir_log_has_discid(dir: &Path, discid: &str) -> bool {
+    let Ok(rd) = std::fs::read_dir(dir) else {
+        return false;
+    };
+    for entry in rd.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|x| x.to_str()) != Some("log") {
+            continue;
+        }
+        if let Ok(text) = std::fs::read_to_string(&path) {
+            if text.contains("DiscID") && text.contains(discid) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 pub fn dirs_with_flac(root: &Path) -> Vec<PathBuf> {
     let Ok(rd) = std::fs::read_dir(root) else {
         return Vec::new();

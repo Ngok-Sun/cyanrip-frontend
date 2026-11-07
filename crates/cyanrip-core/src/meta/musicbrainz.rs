@@ -50,6 +50,8 @@ struct Label {
 #[derive(Deserialize)]
 struct Medium {
     #[serde(default)]
+    position: Option<u32>,
+    #[serde(default)]
     tracks: Vec<MbTrack>,
 }
 
@@ -63,7 +65,10 @@ struct MbTrack {
 }
 
 /// 按 Disc ID 查询；返回所有匹配的发行版（通常只有 1–5 个）。
-pub fn lookup_discid(discid: &str) -> Result<Vec<MetaRelease>> {
+///
+/// `track_count` 是本地这张碟的音轨数：套装里每张碟各有一条 medium，
+/// 必须挑出轨数相符的那条，否则 CD2 会拿到 CD1 的曲名。
+pub fn lookup_discid(discid: &str, track_count: usize) -> Result<Vec<MetaRelease>> {
     // inc 用 `+` 连接，必须手拼 URL，ureq 的 query() 会把它编码成 %2B
     let url = format!(
         "https://musicbrainz.org/ws/2/discid/{discid}?inc=artists+labels+recordings&fmt=json"
@@ -75,6 +80,11 @@ pub fn lookup_discid(discid: &str) -> Result<Vec<MetaRelease>> {
         .into_json()
         .context("MusicBrainz 返回解析失败")?;
 
+    Ok(to_releases(resp, track_count))
+}
+
+/// 把 API 响应转成候选：套装按 medium 拆分，只保留轨数相符的那张。
+fn to_releases(resp: Resp, track_count: usize) -> Vec<MetaRelease> {
     let mut out = Vec::new();
     for r in resp.releases {
         let artist = r
@@ -87,36 +97,47 @@ pub fn lookup_discid(discid: &str) -> Result<Vec<MetaRelease>> {
             .first()
             .map(|li| (li.label.as_ref().map(|l| l.name.clone()), li.catno.clone()))
             .unwrap_or((None, None));
-        let tracks: Vec<MetaTrack> = r
-            .media
-            .iter()
-            .flat_map(|m| m.tracks.iter())
-            .enumerate()
-            .map(|(i, t)| MetaTrack {
-                number: t.number.parse().unwrap_or(i as u32 + 1),
-                title: t.title.clone(),
-                length: t.length.map(Duration::from_millis),
-            })
-            .collect();
-        out.push(MetaRelease {
-            source: MetaSource::MusicBrainz,
-            id: r.id.clone(),
-            title: r.title,
-            artist,
-            date: r.date,
-            country: r.country,
-            label,
-            catno,
-            barcode: r.barcode,
-            tracks,
-            cover_url: Some(format!(
-                "https://coverartarchive.org/release/{}/front-500",
-                r.id
-            )),
-            score: 0,
-        });
+        let total = r.media.len().max(1) as u32;
+        // 找出轨数相符的 medium；没有就放弃这个发行版（通常说明压片不同）
+        let mut matched: Vec<(u32, &Medium)> = Vec::new();
+        for (idx, m) in r.media.iter().enumerate() {
+            if track_count == 0 || m.tracks.len() == track_count {
+                matched.push((m.position.unwrap_or(idx as u32 + 1), m));
+            }
+        }
+        for (disc_no, medium) in matched {
+            let tracks: Vec<MetaTrack> = medium
+                .tracks
+                .iter()
+                .enumerate()
+                .map(|(i, t)| MetaTrack {
+                    number: t.number.parse().unwrap_or(i as u32 + 1),
+                    title: t.title.clone(),
+                    length: t.length.map(Duration::from_millis),
+                })
+                .collect();
+            out.push(MetaRelease {
+                source: MetaSource::MusicBrainz,
+                id: r.id.clone(),
+                title: r.title.clone(),
+                artist: artist.clone(),
+                date: r.date.clone(),
+                country: r.country.clone(),
+                label: label.clone(),
+                catno: catno.clone(),
+                barcode: r.barcode.clone(),
+                tracks,
+                disc_number: disc_no,
+                disc_total: total,
+                cover_url: Some(format!(
+                    "https://coverartarchive.org/release/{}/front-500",
+                    r.id
+                )),
+                score: 0,
+            });
+        }
     }
-    Ok(out)
+    out
 }
 
 #[cfg(test)]
@@ -143,5 +164,43 @@ mod tests {
         assert_eq!(r.artist_credit[0].name, "久石譲");
         assert_eq!(r.media[0].tracks.len(), 2);
         assert_eq!(r.media[0].tracks[0].length, Some(198133));
+    }
+
+    const TWO_DISC: &str = r#"{
+      "releases": [{
+        "id": "rel-1", "title": "Works for Violin and Orchestra", "date": "1992",
+        "artist-credit": [{"name": "Paganini"}],
+        "media": [
+          {"position": 1, "tracks": [
+            {"number": "1", "title": "Variazioni", "length": 725000},
+            {"number": "2", "title": "Larghetto", "length": 237000}
+          ]},
+          {"position": 2, "tracks": [
+            {"number": "1", "title": "Sonata Varsavia", "length": 925000}
+          ]}
+        ]
+      }]
+    }"#;
+
+    #[test]
+    fn picks_medium_matching_track_count() {
+        let resp: Resp = serde_json::from_str(TWO_DISC).unwrap();
+        // 第二张碟：1 轨
+        let rels = to_releases(resp, 1);
+        assert_eq!(rels.len(), 1);
+        assert_eq!(rels[0].disc_number, 2);
+        assert_eq!(rels[0].disc_total, 2);
+        assert_eq!(rels[0].tracks[0].title, "Sonata Varsavia");
+
+        // 第一张碟：2 轨
+        let resp: Resp = serde_json::from_str(TWO_DISC).unwrap();
+        let rels = to_releases(resp, 2);
+        assert_eq!(rels.len(), 1);
+        assert_eq!(rels[0].disc_number, 1);
+        assert_eq!(rels[0].tracks[0].title, "Variazioni");
+
+        // 轨数对不上：不要瞎给候选
+        let resp: Resp = serde_json::from_str(TWO_DISC).unwrap();
+        assert!(to_releases(resp, 7).is_empty());
     }
 }

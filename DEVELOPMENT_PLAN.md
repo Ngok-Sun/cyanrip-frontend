@@ -544,8 +544,24 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 - 介质轮询重复探测同一张碟时保留用户的勾选（之前会重置成全选，导致误抓整张）
 - 抓轨前识别未完成时点「开始」，等识别结束再启动（上限 15s），避免丢掉元数据
 
+**套装（多碟）支持（2026-11-07 补）**
+- MusicBrainz / Discogs 都按「本碟音轨数」挑出对应的 medium / Discogs 分碟组，
+  不再把整套曲目拍平成一条列表（之前 CD2 会拿到 CD1 的曲名）
+- 候选带上 `disc_number` / `disc_total`；界面显示 `CD1/2`
+- 抓轨时补 `-a disc=N:totaldiscs=M`，并用 `-D "{album} CD{disc} [{format}]"` 分目录，
+  两张碟同时抓不会写同一个文件夹
+- `tag::apply` 以发行版碟号为准：`DISCNUMBER/DISCTOTAL` 正确，文件名带 `CD1-`/`CD2-`
+- 目标文件已存在时仍按「报错不覆盖」处理，避免并发误盖
+
+**并发抓双碟时踩的坑（2026-11-07）**
+- 定位「本次抓轨目录」原来只看 mtime/新建差集，两张碟同时抓时会互相认错：
+  A 把 B 正在写的 0 字节文件搬到 CD1 目录，metaflac 报 "NOT_A_FLAC_FILE"，
+  之后 B 又把 A 的成品搬走，结果两张碟的音频互换
+- 现在先用 `DiscID` 匹配目录里的 rip 日志（日志里唯一且稳定），再退回差集/mtime
+- `tag::apply` 搬文件前检查 FLAC 文件头（`fLaC` + 非空），不完整的直接报错
+- `dirs_with_flac` 只统计写完的 FLAC，0 字节文件不再算数
+
 **已知限制**
-- 多碟装的 DISCNUMBER/DISCTOTAL 目前固定写 `1/1`，需要界面提供碟号选择（M4）
 - 未识别碟（如花儿 CD2）在 MB 无 discid、无 MCN、无 AcoustID key 时无候选，只能手工补
 - 封面优先 Discogs primary 图；MB 候选走 Cover Art Archive
 

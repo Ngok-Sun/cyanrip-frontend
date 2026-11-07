@@ -91,7 +91,8 @@ fn get_json<T: for<'de> Deserialize<'de>>(url: &str) -> Result<T> {
 }
 
 /// 按关键字（艺人 / 专辑 / 条码）搜索。
-pub fn search(q: &str) -> Result<Vec<MetaRelease>> {
+pub fn search(q: &str, track_count: usize) -> Result<Vec<MetaRelease>> {
+    let _ = track_count;
     let url = format!(
         "https://api.discogs.com/database/search?q={}&type=release&per_page=15",
         urlencode(q)
@@ -115,6 +116,8 @@ pub fn search(q: &str) -> Result<Vec<MetaRelease>> {
             catno: None,
             barcode: None,
             tracks: Vec::new(),
+            disc_number: 0,
+            disc_total: 1,
             cover_url: None,
             score: 0,
         })
@@ -122,7 +125,7 @@ pub fn search(q: &str) -> Result<Vec<MetaRelease>> {
 }
 
 /// 按条码搜索并取回每个候选的曲目表（最多 5 个候选，避免打爆限速）。
-pub fn by_barcode(barcode: &str) -> Result<Vec<MetaRelease>> {
+pub fn by_barcode(barcode: &str, track_count: usize) -> Result<Vec<MetaRelease>> {
     let url = format!(
         "https://api.discogs.com/database/search?barcode={}&type=release&per_page=10",
         urlencode(barcode)
@@ -130,29 +133,47 @@ pub fn by_barcode(barcode: &str) -> Result<Vec<MetaRelease>> {
     let resp: SearchResp = get_json(&url)?;
     let mut out = Vec::new();
     for item in resp.results.into_iter().take(5) {
-        if let Ok(rel) = get_release(item.id) {
-            out.push(rel);
+        if let Ok(mut rels) = get_release(item.id, track_count) {
+            out.append(&mut rels);
         }
     }
     Ok(out)
 }
 
+/// Discogs 的 track position：套装写成 "1-03"，单碟写成 "03"；黑胶是 "A1"。
+/// 返回 (碟号, 碟内轨号)。
+fn split_position(pos: &str, fallback: u32) -> (u32, u32) {
+    if let Some((disc, track)) = pos.split_once('-') {
+        (
+            disc.trim().parse().unwrap_or(1),
+            track.trim().parse().unwrap_or(fallback),
+        )
+    } else {
+        (1, pos.trim().parse().unwrap_or(fallback))
+    }
+}
+
 /// 读取单个发行版（含曲目、条码、封面）。
-pub fn get_release(id: u64) -> Result<MetaRelease> {
+///
+/// 返回**每张碟一个**候选：`track_count` 是本机这张碟的音轨数，用来挑出对应的碟。
+pub fn get_release(id: u64, track_count: usize) -> Result<Vec<MetaRelease>> {
     let url = format!("https://api.discogs.com/releases/{id}");
     let r: Release = get_json(&url)?;
 
-    let tracks: Vec<MetaTrack> = r
-        .tracklist
-        .iter()
-        .filter(|t| t.kind.as_deref() != Some("heading"))
-        .enumerate()
-        .map(|(i, t)| MetaTrack {
-            number: t.position.parse().unwrap_or(i as u32 + 1),
+    let mut groups: std::collections::BTreeMap<u32, Vec<MetaTrack>> =
+        std::collections::BTreeMap::new();
+    for (i, t) in r.tracklist.iter().enumerate() {
+        if t.kind.as_deref() == Some("heading") {
+            continue;
+        }
+        let (disc, number) = split_position(&t.position, i as u32 + 1);
+        groups.entry(disc).or_default().push(MetaTrack {
+            number,
             title: t.title.clone(),
             length: parse_duration(&t.duration),
-        })
-        .collect();
+        });
+    }
+    let disc_total = groups.keys().copied().max().unwrap_or(1).max(1);
 
     let barcode = r
         .identifiers
@@ -166,28 +187,37 @@ pub fn get_release(id: u64) -> Result<MetaRelease> {
                 .map(|i| i.value.clone())
         });
 
-    Ok(MetaRelease {
-        source: MetaSource::Discogs,
-        id: r.id.to_string(),
-        title: r.title,
-        artist: r
-            .artists
-            .first()
-            .map(|a| a.name.clone())
-            .unwrap_or_default(),
-        date: r.year.map(|y| y.to_string()),
-        country: r.country,
-        label: r.labels.first().map(|l| l.name.clone()),
-        catno: r.labels.first().and_then(|l| l.catno.clone()),
-        barcode,
-        tracks,
-        cover_url: r
-            .images
-            .iter()
-            .find(|i| i.kind == "primary")
-            .map(|i| i.uri.clone()),
-        score: 0,
-    })
+    let mut out = Vec::new();
+    for (disc_no, tracks) in groups {
+        if track_count > 0 && tracks.len() != track_count {
+            continue;
+        }
+        out.push(MetaRelease {
+            source: MetaSource::Discogs,
+            id: r.id.to_string(),
+            title: r.title.clone(),
+            artist: r
+                .artists
+                .first()
+                .map(|a| a.name.clone())
+                .unwrap_or_default(),
+            date: r.year.map(|y| y.to_string()),
+            country: r.country.clone(),
+            label: r.labels.first().map(|l| l.name.clone()),
+            catno: r.labels.first().and_then(|l| l.catno.clone()),
+            barcode: barcode.clone(),
+            tracks,
+            disc_number: disc_no,
+            disc_total,
+            cover_url: r
+                .images
+                .iter()
+                .find(|i| i.kind == "primary")
+                .map(|i| i.uri.clone()),
+            score: 0,
+        });
+    }
+    Ok(out)
 }
 
 fn parse_duration(s: &str) -> Option<Duration> {
@@ -234,5 +264,13 @@ mod tests {
     fn urlencodes_spaces_and_unicode() {
         assert_eq!(urlencode("a b"), "a%20b");
         assert_eq!(urlencode("久石譲"), "%E4%B9%85%E7%9F%B3%E8%AD%B2");
+    }
+
+    #[test]
+    fn splits_disc_position() {
+        assert_eq!(split_position("1-03", 9), (1, 3));
+        assert_eq!(split_position("2-01", 9), (2, 1));
+        assert_eq!(split_position("07", 9), (1, 7));
+        assert_eq!(split_position("A1", 9), (1, 9));
     }
 }

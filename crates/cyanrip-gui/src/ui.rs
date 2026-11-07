@@ -1287,8 +1287,20 @@ fn build_cyanrip_args(
         if let Some(b) = rel.barcode.as_deref() {
             album.push_str(&format!(":barcode={b}"));
         }
+        if rel.disc_total > 1 {
+            album.push_str(&format!(
+                ":disc={}:totaldiscs={}",
+                rel.disc_number.max(1),
+                rel.disc_total
+            ));
+        }
         args.push("-a".into());
         args.push(album);
+        // 套装必须分目录，否则两张碟会往同一个文件夹写同名文件
+        if rel.disc_total > 1 {
+            args.push("-D".into());
+            args.push("{album} CD{disc} [{format}]".into());
+        }
         for (i, t) in rel.tracks.iter().enumerate() {
             args.push("-t".into());
             args.push(format!("{}=title={}", i + 1, t.title));
@@ -1520,7 +1532,8 @@ fn handle_event(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>, ev: Event) {
             };
             fill_result(ui, state, &report);
             let root = settings.output.root.clone();
-            let dir = pick_rip_dir(state, &root);
+            let discid = state.borrow().disc.as_ref().and_then(meta::disc_id);
+            let dir = pick_rip_dir(state, &root, discid.as_deref());
             *ui.last_rip_dir.borrow_mut() = dir;
             if settings.behavior.auto_tag_after_rip && state.borrow().current_release().is_some() {
                 apply_meta(ui, state);
@@ -1834,6 +1847,8 @@ fn start_meta_resolve(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
                 label: None,
                 catno: None,
                 barcode: None,
+                disc_number: 1,
+                disc_total: 1,
                 tracks: vec![cyanrip_core::meta::MetaTrack {
                     number: 1,
                     title: "测试曲目".into(),
@@ -1944,10 +1959,16 @@ fn start_meta_pump(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
                             .set_model(Some(&gtk::StringList::new(&refs)));
                         ui2.meta_dropdown.set_visible(true);
                         let first = &list[0];
+                        let disc_tag = if first.disc_total > 1 {
+                            format!(" CD{}/{}", first.disc_number, first.disc_total)
+                        } else {
+                            String::new()
+                        };
                         ui2.meta_label.set_text(&format!(
-                            "{} — {}（{} · {}）",
+                            "{} — {}{}（{} · {}）",
                             first.artist,
                             first.title,
+                            disc_tag,
                             first.date.clone().unwrap_or_else(|| "年份未知".into()),
                             first.source.as_str()
                         ));
@@ -2024,7 +2045,26 @@ fn list_sound_events() -> Vec<String> {
 
 /// 定位本次抓轨产生的目录：用开始前的快照做差集，避免同时抓两张碟时
 /// 把另一个实例的目录当成自己的（`newest_rip_dir` 只按 mtime 猜）。
-fn pick_rip_dir(state: &Rc<RefCell<AppState>>, root: &Path) -> Option<PathBuf> {
+fn pick_rip_dir(
+    state: &Rc<RefCell<AppState>>,
+    root: &Path,
+    discid: Option<&str>,
+) -> Option<PathBuf> {
+    // 首选：日志里的 DiscID 与本机这张碟一致。并发抓两张碟时，
+    // 目录创建时间/顺序都不可靠，DiscID 是唯一能区分彼此的标记。
+    if let Some(id) = discid {
+        let mut hits: Vec<PathBuf> = tag::dirs_with_flac(root)
+            .into_iter()
+            .filter(|d| tag::dir_log_has_discid(d, id))
+            .collect();
+        if !hits.is_empty() {
+            return hits.drain(..).max_by_key(|d| {
+                std::fs::metadata(d)
+                    .and_then(|m| m.modified())
+                    .unwrap_or(std::time::UNIX_EPOCH)
+            });
+        }
+    }
     let current = tag::dirs_with_flac(root);
     let before = state.borrow().rip_dirs_before.clone().unwrap_or_default();
     let mut fresh: Vec<PathBuf> = current

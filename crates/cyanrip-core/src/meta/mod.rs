@@ -39,6 +39,10 @@ pub struct MetaTrack {
     pub length: Option<Duration>,
 }
 
+fn one() -> u32 {
+    1
+}
+
 /// 一张候选发行版（来自任一数据源）。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MetaRelease {
@@ -58,6 +62,12 @@ pub struct MetaRelease {
     #[serde(default)]
     pub barcode: Option<String>,
     pub tracks: Vec<MetaTrack>,
+    /// 本候选对应的碟号（1 起）；0 表示未知
+    #[serde(default)]
+    pub disc_number: u32,
+    /// 套装总碟数（单碟为 1）
+    #[serde(default = "one")]
+    pub disc_total: u32,
     #[serde(default)]
     pub cover_url: Option<String>,
     /// 与碟片 TOC 的吻合度（0–100），用于排序
@@ -83,7 +93,8 @@ impl MetaRelease {
             }
         }
         if known == 0 {
-            // Discogs 很多发行版不填时长，只能按轨数确认
+            // Discogs 很多发行版不填时长，只能按轨数确认；
+            // 套装里同轨数的两张碟会并列，靠碟序再分一次（见 sort 前的 tie-break）
             return 60;
         }
         (hits * 100 / durations.len().max(1)) as u8
@@ -125,7 +136,7 @@ pub fn resolve(info: &crate::model::DiscInfo, first_audio_file: Option<&Path>) -
     let mut out = Vec::new();
 
     if let Some(id) = disc_id(info) {
-        if let Ok(mut rels) = musicbrainz::lookup_discid(&id) {
+        if let Ok(mut rels) = musicbrainz::lookup_discid(&id, durations.len()) {
             for r in &mut rels {
                 r.score = r.score_against(&durations);
             }
@@ -136,7 +147,7 @@ pub fn resolve(info: &crate::model::DiscInfo, first_audio_file: Option<&Path>) -
     // 碟片 MCN 往往就是条码：直接查 Discogs
     if out.is_empty() {
         if let Some(mcn) = info.mcn.as_deref() {
-            if let Ok(mut rels) = discogs::by_barcode(mcn) {
+            if let Ok(mut rels) = discogs::by_barcode(mcn, durations.len()) {
                 for r in &mut rels {
                     r.score = r.score_against(&durations);
                 }
@@ -149,7 +160,9 @@ pub fn resolve(info: &crate::model::DiscInfo, first_audio_file: Option<&Path>) -
     if out.is_empty() {
         if let Some(file) = first_audio_file {
             if let Ok(m) = acoustid::identify(file) {
-                if let Ok(mut rels) = discogs::search(&format!("{} {}", m.artist, m.title)) {
+                if let Ok(mut rels) =
+                    discogs::search(&format!("{} {}", m.artist, m.title), durations.len())
+                {
                     for r in &mut rels {
                         r.score = r.score_against(&durations);
                     }
