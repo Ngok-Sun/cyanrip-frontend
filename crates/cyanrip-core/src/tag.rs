@@ -71,6 +71,7 @@ pub fn apply(
         let meta = release.tracks.get(i);
         let title = meta
             .map(|t| sanitize(&t.title))
+            .filter(|t| !t.trim().is_empty())
             .unwrap_or_else(|| format!("Track {:02}", i + 1));
         let number = meta.map(|t| t.number).unwrap_or(i as u32 + 1);
         let name = if disc.1 > 1 {

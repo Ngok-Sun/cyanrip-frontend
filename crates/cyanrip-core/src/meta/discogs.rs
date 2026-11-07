@@ -194,9 +194,14 @@ pub fn get_release(id: u64, track_count: usize) -> Result<Vec<MetaRelease>> {
             continue;
         }
         let (disc, number) = split_position(&t.position, i as u32 + 1);
+        let title = if t.title.trim().is_empty() {
+            format!("Track {number:02}")
+        } else {
+            t.title.clone()
+        };
         groups.entry(disc).or_default().push(MetaTrack {
             number,
-            title: t.title.clone(),
+            title,
             length: parse_duration(&t.duration),
         });
     }

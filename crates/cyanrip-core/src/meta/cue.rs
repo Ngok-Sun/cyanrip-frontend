@@ -135,9 +135,14 @@ pub fn parse_str(text: &str, id: &str) -> MetaRelease {
 }
 
 fn push_track(tracks: &mut Vec<MetaTrack>, t: TrackBuilder) {
+    // TITLE "" 这种空值也要回退，否则界面/文件名会是一段空白
+    let title = t
+        .title
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or_else(|| format!("Track {:02}", t.number));
     tracks.push(MetaTrack {
         number: t.number,
-        title: t.title.unwrap_or_else(|| format!("Track {:02}", t.number)),
+        title,
         length: None,
     });
 }

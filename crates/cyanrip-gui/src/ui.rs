@@ -1411,6 +1411,9 @@ pub fn refresh_disc(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
         let row = adw::ActionRow::builder()
             .title(&title)
             .subtitle(fmt_duration(t.duration()))
+            // 曲名里的 & < > 会被当 Pango 标记解析（AdwActionRow 默认 use-markup=true），
+            // 比如 "…& orchestra" 解析失败就会显示成空白
+            .use_markup(false)
             .build();
         let check = gtk::CheckButton::new();
         check.set_active(st.selected.get(i).copied().unwrap_or(true));
@@ -2629,13 +2632,13 @@ fn start_meta_pump(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
                     }
                     if std::env::var("CYANRIP_GUI_DEBUG").as_deref() == Ok("1") {
                         eprintln!(
-                            "META candidates={} titles={:?}",
+                            "META candidates={} blank_titles={:?}",
                             list.len(),
                             list.first().map(|r| r
                                 .tracks
                                 .iter()
-                                .take(3)
-                                .map(|t| t.title.clone())
+                                .filter(|t| t.title.trim().is_empty())
+                                .map(|t| t.number)
                                 .collect::<Vec<_>>())
                         );
                     }

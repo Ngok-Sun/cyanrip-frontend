@@ -110,10 +110,18 @@ fn to_releases(resp: Resp, track_count: usize) -> Vec<MetaRelease> {
                 .tracks
                 .iter()
                 .enumerate()
-                .map(|(i, t)| MetaTrack {
-                    number: t.number.parse().unwrap_or(i as u32 + 1),
-                    title: t.title.clone(),
-                    length: t.length.map(Duration::from_millis),
+                .map(|(i, t)| {
+                    let number = t.number.parse().unwrap_or(i as u32 + 1);
+                    let title = if t.title.trim().is_empty() {
+                        format!("Track {number:02}")
+                    } else {
+                        t.title.clone()
+                    };
+                    MetaTrack {
+                        number,
+                        title,
+                        length: t.length.map(Duration::from_millis),
+                    }
                 })
                 .collect();
             out.push(MetaRelease {
