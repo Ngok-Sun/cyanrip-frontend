@@ -432,7 +432,16 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 
 ---
 
-### 7.7 多实例（两台光驱同时抓轨）
+### 7.7 图标与桌面项
+
+- 应用 id：`io.github.cyanrip.Frontend`
+- 图标：`assets/io.github.cyanrip.Frontend.svg`（CD + 抓轨箭头），装到
+  `~/.local/share/icons/hicolor/scalable/apps/`，名字与 app id 一致
+- 桌面项文件名必须等于 app id（`io.github.cyanrip.Frontend.desktop`），
+  否则 GNOME 在 Wayland 下找不到窗口对应的入口，任务栏会显示通用图标
+- 代码里再显式 `set_icon_name` / `set_default_icon_name`，兼顾 X11 与无桌面项场景
+
+### 7.8 多实例（两台光驱同时抓轨）
 
 默认是单实例应用（GApplication）：再启动一个进程只会把已有窗口提到前台。
 要并行抓两张碟，需要显式开第二个实例并给它独立配置：

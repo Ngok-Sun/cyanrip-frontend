@@ -241,9 +241,15 @@ fn main() -> glib::ExitCode {
                 let icon_ok = gtk::gdk::Display::default()
                     .map(|d| gtk::IconTheme::for_display(&d).has_icon("media-eject-symbolic"))
                     .unwrap_or(false);
+                let win_icon = ui2.window.icon_name().unwrap_or_default().to_string();
+                let app_icon_ok = gtk::gdk::Display::default()
+                    .map(|d| {
+                        gtk::IconTheme::for_display(&d).has_icon("io.github.cyanrip.Frontend")
+                    })
+                    .unwrap_or(false);
 
                 println!(
-                    "SELFTEST initial_disabled={initial_disabled} dirty={dirty} saved={saved} clean_after_save={clean} all_off={all_off} all_on={all_on} devices={devices} selected={sel_dev} refresh_ok={refresh_ok} eject_icon={icon_ok} eject_classes={eject_classes:?} covers_empty={covers_empty} covers_one={covers_one} covers_all={covers_all} token_dirty={token_dirty} token_saved={token_saved} secrets_mode={secrets_mode} config_has_token={config_has_token} refresh_classes={refresh_classes:?} theme_events={theme_events} theme_combo_ok={combo_ok} root_subtitle={root_subtitle:?} disc_after={after:?}"
+                    "SELFTEST initial_disabled={initial_disabled} dirty={dirty} saved={saved} clean_after_save={clean} all_off={all_off} all_on={all_on} devices={devices} selected={sel_dev} refresh_ok={refresh_ok} eject_icon={icon_ok} app_icon={app_icon_ok} win_icon={win_icon} eject_classes={eject_classes:?} covers_empty={covers_empty} covers_one={covers_one} covers_all={covers_all} token_dirty={token_dirty} token_saved={token_saved} secrets_mode={secrets_mode} config_has_token={config_has_token} refresh_classes={refresh_classes:?} theme_events={theme_events} theme_combo_ok={combo_ok} root_subtitle={root_subtitle:?} disc_after={after:?}"
                 );
                 app2.quit();
                 glib::ControlFlow::Break

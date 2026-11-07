@@ -46,6 +46,12 @@ cyanrip-frontend-2     # = CYANRIP_GUI_STANDALONE=1 + CYANRIP_GUI_CONFIG=~/.conf
 ```bash
 cargo run -p cyanrip-gui            # 调试
 cargo build --release -p cyanrip-gui && ./target/release/cyanrip-frontend
+# 安装（含图标与桌面项，供任务栏/应用菜单使用）
+install -Dm755 target/release/cyanrip-frontend ~/.local/bin/cyanrip-frontend
+install -Dm644 assets/io.github.cyanrip.Frontend.svg \
+        ~/.local/share/icons/hicolor/scalable/apps/io.github.cyanrip.Frontend.svg
+gtk-update-icon-cache -f -t ~/.local/share/icons/hicolor
+
 # 或直接运行已安装版本
 ~/.local/bin/cyanrip-frontend
 ```

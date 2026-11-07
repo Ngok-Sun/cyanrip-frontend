@@ -125,6 +125,10 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
         .default_width(1080)
         .default_height(700)
         .build();
+    // 任务栏/窗口图标：与桌面项同名（Wayland 下按 app-id 找 .desktop，
+    // 这里再显式设一次，兼顾 X11 与没有桌面项的场景）
+    gtk::Window::set_default_icon_name("io.github.cyanrip.Frontend");
+    window.set_icon_name(Some("io.github.cyanrip.Frontend"));
 
     let header = adw::HeaderBar::new();
     let stack = gtk::Stack::builder()
