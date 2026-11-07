@@ -99,7 +99,7 @@ pub fn parse_str(text: &str, id: &str) -> MetaRelease {
                 let value = unquote(parts.next().unwrap_or(""));
                 match sub.as_str() {
                     "DATE" => date = Some(value),
-                    "BARCODE" => barcode = Some(value.replace('-', "").replace(' ', "")),
+                    "BARCODE" => barcode = Some(value.replace(['-', ' '], "")),
                     "DISCNUMBER" => disc_number = value.parse().unwrap_or(1),
                     "TOTALDISCS" | "TOTALDISCS " => disc_total = value.parse().unwrap_or(1),
                     _ => {}
