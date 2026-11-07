@@ -520,4 +520,16 @@ language = "zh"               # 本阶段只打包 zh，其余语言留接口
   - 修复：`CDROMREADTOCHDR` 常量误写为 0x5302（实为 `CDROMRESUME`，返回 0 且不写缓冲区），已改为 0x5305
 - 待办：GUI crate 随 M2 建立
 
-### M2 — 未开始
+### M2 — 已完成（2026-11-07）
+
+- `crates/cyanrip-gui`：AdwApplicationWindow + ToolbarView + HeaderBar + Stack（碟片 / 进度 / 结果 / 设置）
+- 碟片页：设备、探测、测定偏移（调 `cyanrip -f`，结果按光驱型号记忆）、曲目勾选
+- 设置页：设备与驱动 / 输出 / 元数据（占位）/ 行为（含提示音）/ 高级，改动即时写 `config.toml`
+- 进度页：本轨 + 总进度双条、倍速、已用/剩余、实时日志、取消
+- 结果页：逐轨 EAC CRC32 / AR 状态，打开目录、复制日志
+- 工作线程：tokio runtime + `std::sync::mpsc` 回主线程，100ms 轮询，GTK 主线程不阻塞
+- i18n：所有字符串经 `gettext`（中文作 msgid），无 `.mo` 时原样回退
+- 验收：
+  - `CYANRIP_GUI_SMOKE=1`：窗口构建 + 探测（13 轨 / 41:22）后正常退出
+  - `CYANRIP_GUI_AUTORIP=1`：界面驱动的单轨抓轨 `1/1` 精确命中，CRC `01834C83`、AR `17AF569B`（与命令行逐位一致）
+- 踩坑：AdwApplicationWindow 不支持 `set_titlebar`（必须用 `adw::ToolbarView` 承载 HeaderBar）

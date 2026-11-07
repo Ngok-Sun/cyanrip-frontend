@@ -19,6 +19,7 @@ pub struct Settings {
     pub meta: MetaSettings,
     pub behavior: BehaviorSettings,
     pub ui: UiSettings,
+    pub advanced: AdvancedSettings,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -160,6 +161,24 @@ impl Default for BehaviorSettings {
             shutdown_when_done: false,
             on_error: "continue".into(),
             unknown_disc: "pause".into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
+pub struct AdvancedSettings {
+    /// cyanrip 可执行文件（PATH 或绝对路径）
+    pub bin: String,
+    /// 额外透传参数（空格分隔）
+    pub extra_args: String,
+}
+
+impl Default for AdvancedSettings {
+    fn default() -> Self {
+        Self {
+            bin: "cyanrip".into(),
+            extra_args: String::new(),
         }
     }
 }

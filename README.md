@@ -2,13 +2,14 @@
 
 cyanrip 的原生 GTK4 前端（Rust）。设计文档见 [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)。
 
-当前状态：**M1 完成**（core + 无头 CLI，GUI 未开始）。
+当前状态：**M2 完成**（core + CLI + GTK4 五页 GUI）。
 
 ## 结构
 
 ```
 crates/cyanrip-core/   # 碟片探测、抓轨编排、进度与日志解析（不依赖 GTK）
 crates/cyanrip-cli/    # 无头入口：probe / parse-log / rip
+crates/cyanrip-gui/    # GTK4 + libadwaita 前端（碟片 / 进度 / 结果 / 设置）
 ```
 
 ## 依赖
@@ -22,6 +23,23 @@ crates/cyanrip-cli/    # 无头入口：probe / parse-log / rip
 ```bash
 cargo build
 cargo test          # 22 个单测 + 2 个流式/取消集成测试，全部离线
+```
+
+## 启动 GUI
+
+```bash
+cargo run -p cyanrip-gui            # 调试
+cargo build --release -p cyanrip-gui && ./target/release/cyanrip-frontend
+```
+
+界面：顶部切换「碟片 / 进度 / 结果 / 设置」。碟片页填设备与偏移 → 探测 → 勾选曲目 → 开始抓轨；
+抓轨中显示本轨与总进度、倍速、已用/剩余、实时日志；完成后结果页列出每轨 EAC CRC32 与 AR 状态。
+
+自测开关（不需要人工点界面）：
+
+```bash
+CYANRIP_GUI_SMOKE=1   timeout 20 ./target/debug/cyanrip-frontend   # 只构建并退出
+CYANRIP_GUI_AUTORIP=1 timeout 400 ./target/debug/cyanrip-frontend  # 只抓第一轨，打印结果后退出
 ```
 
 ## 用法

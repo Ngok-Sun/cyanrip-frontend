@@ -175,6 +175,7 @@ fn rip_cmd(args: &[String]) -> Result<()> {
             offset,
             extra_args: extra,
             log_path,
+            cwd: None,
         };
 
         let consumer = tokio::spawn(async move {

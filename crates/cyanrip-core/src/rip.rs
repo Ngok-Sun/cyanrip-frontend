@@ -31,6 +31,8 @@ pub struct RipOptions {
     pub extra_args: Vec<String>,
     /// 结束时优先解析这份日志
     pub log_path: Option<PathBuf>,
+    /// 子进程工作目录（cyanrip 会把输出建在 CWD 下）
+    pub cwd: Option<PathBuf>,
 }
 
 impl RipOptions {
@@ -41,6 +43,7 @@ impl RipOptions {
             offset,
             extra_args: Vec::new(),
             log_path: None,
+            cwd: None,
         }
     }
 
@@ -156,6 +159,9 @@ pub async fn run(
     mut cancel: watch::Receiver<bool>,
 ) -> Result<RipReport> {
     let mut cmd = Command::new(&opts.bin);
+    if let Some(dir) = &opts.cwd {
+        cmd.current_dir(dir);
+    }
     cmd.args(opts.command_args())
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
