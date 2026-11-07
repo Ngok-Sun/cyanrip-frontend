@@ -1,6 +1,8 @@
 # cyanrip-frontend
 
-cyanrip 的原生 GTK4 前端（Rust）。设计文档见 [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)。
+cyanrip 的原生 GTK4 前端（Rust）。**中文** · [English](README.en.md)
+
+设计文档见 [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)。
 
 当前状态：**v1.0**（2026-11-08）。M1–M4 完成并通过真碟验收。
 
@@ -50,6 +52,8 @@ cargo build --release -p cyanrip-gui && ./target/release/cyanrip-frontend
 install -Dm755 target/release/cyanrip-frontend ~/.local/bin/cyanrip-frontend
 install -Dm644 assets/io.github.cyanrip.Frontend.svg \
         ~/.local/share/icons/hicolor/scalable/apps/io.github.cyanrip.Frontend.svg
+install -Dm644 assets/io.github.cyanrip.Frontend.desktop \
+        ~/.local/share/applications/io.github.cyanrip.Frontend.desktop
 gtk-update-icon-cache -f -t ~/.local/share/icons/hicolor
 
 # 或直接运行已安装版本

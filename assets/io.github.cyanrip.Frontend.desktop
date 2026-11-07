@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=cyanrip Frontend
+Name[zh_CN]=cyanrip 前端
+GenericName=CD Ripper
+GenericName[zh_CN]=CD 抓轨
+Comment=Graphical frontend for cyanrip (bit-perfect ripping, AccurateRip)
+Comment[zh_CN]=cyanrip 的图形前端（精确抓轨、AccurateRip 校验）
+Exec=cyanrip-frontend
+Icon=io.github.cyanrip.Frontend
+Terminal=false
+Categories=AudioVideo;Audio;
+StartupWMClass=io.github.cyanrip.Frontend
+Keywords=cd;rip;flac;cyanrip;accuraterip;
