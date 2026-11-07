@@ -493,6 +493,23 @@ fn build_settings_page(state: &Rc<RefCell<AppState>>) -> SettingsWidgets {
         .build();
     advanced_group.add(&bin_entry);
 
+    // 构建时间：用来确认当前窗口跑的是不是刚装的那版
+    let build_stamp = std::env::current_exe()
+        .ok()
+        .and_then(|p| std::fs::metadata(p).ok())
+        .and_then(|m| m.modified().ok())
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .and_then(|d| glib::DateTime::from_unix_local(d.as_secs() as i64).ok())
+        .and_then(|dt| dt.format("%Y-%m-%d %H:%M:%S").ok())
+        .map(|s| s.to_string())
+        .unwrap_or_default();
+    let build_row = adw::ActionRow::builder()
+        .title(tr("程序构建时间"))
+        .subtitle(&build_stamp)
+        .build();
+    build_row.set_activatable(false);
+    advanced_group.add(&build_row);
+
     // 应用：显式保存（用户要求有保存按钮），未保存时状态行会提示
     let apply_group = adw::PreferencesGroup::builder().title(tr("应用")).build();
     let save_btn = gtk::Button::with_label(&tr("保存"));
