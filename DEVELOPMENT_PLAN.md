@@ -316,7 +316,9 @@ language = "zh"               # 本阶段只打包 zh，其余语言留接口
 - 设备为 `GtkDropDown`，项来自 `/dev/sr*`，标签带 sysfs 读到的厂商+型号；切换即自动探测
 - 「刷新」= 重扫 `/dev/sr*` + 读取当前碟片 TOC + 触发元数据识别，一个按钮做完整刷新
   （原「重新扫描」和「探测」两个按钮已合并；托盘为空时只更新状态，不弹错误）
-- 「弹出」是图标按钮（`media-eject-symbolic`，带 tooltip 与无障碍标签），调 `eject`（见 §14 桥接坑）
+- 「弹出」是图标按钮（`media-eject-symbolic`，带 tooltip 与无障碍标签），调 `eject`（见 §14 桥接坑）；
+  **不能用 `Button::from_icon_name`**——GTK 会加 `image-button` 类，libadwaita 把它画成无边框、
+  只在悬停时变灰，和旁边的文字按钮不一致。改成 `Button::new()` + `Image` 子控件 + `text-button` 类。
 - 「测定偏移」调 `cyanrip -f`，结果按光驱型号记忆
 - 「全选」为三态复选框：逐轨取消时自动变半选
 - 曲目表用 `GtkListBox` + `AdwActionRow`（13–24 轨规模足够，未用 ColumnView）

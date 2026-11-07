@@ -141,12 +141,24 @@ fn main() -> glib::ExitCode {
                 let after = st2.borrow().disc.as_ref().map(|d| d.leadout_lsn);
                 let devs_after = ui2.device_paths.borrow().len();
                 let refresh_ok = before == after && devs_before == devs_after;
+                let eject_classes: Vec<String> = ui2
+                    .eject_btn
+                    .css_classes()
+                    .iter()
+                    .map(|c| c.to_string())
+                    .collect();
+                let refresh_classes: Vec<String> = ui2
+                    .rescan_btn
+                    .css_classes()
+                    .iter()
+                    .map(|c| c.to_string())
+                    .collect();
                 let icon_ok = gtk::gdk::Display::default()
                     .map(|d| gtk::IconTheme::for_display(&d).has_icon("media-eject-symbolic"))
                     .unwrap_or(false);
 
                 println!(
-                    "SELFTEST initial_disabled={initial_disabled} dirty={dirty} saved={saved} clean_after_save={clean} all_off={all_off} all_on={all_on} devices={devices} selected={sel_dev} refresh_ok={refresh_ok} eject_icon={icon_ok} disc_after={after:?}"
+                    "SELFTEST initial_disabled={initial_disabled} dirty={dirty} saved={saved} clean_after_save={clean} all_off={all_off} all_on={all_on} devices={devices} selected={sel_dev} refresh_ok={refresh_ok} eject_icon={icon_ok} eject_classes={eject_classes:?} refresh_classes={refresh_classes:?} disc_after={after:?}"
                 );
                 app2.quit();
                 glib::ControlFlow::Break

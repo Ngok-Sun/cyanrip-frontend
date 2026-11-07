@@ -120,7 +120,11 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
     let rescan_btn = gtk::Button::with_label(&tr("刷新"));
     rescan_btn.set_tooltip_text(Some(&tr("重新扫描光驱并读取当前碟片")));
     // 通用「弹出」图标（Adwaita/Yaru 都有 media-eject-symbolic）
-    let eject_btn = gtk::Button::from_icon_name("media-eject-symbolic");
+    // 注意：用 icon_name 构造会让 GTK 打上 `image-button` 类，libadwaita 把它渲染成
+    // 无边框（只在悬停时变色）。这里改成普通按钮 + 图标子控件，保持和文字按钮同款边框。
+    let eject_btn = gtk::Button::new();
+    eject_btn.set_child(Some(&gtk::Image::from_icon_name("media-eject-symbolic")));
+    eject_btn.add_css_class("text-button");
     eject_btn.set_tooltip_text(Some(&tr("弹出光驱托盘")));
     eject_btn.update_property(&[gtk::accessible::Property::Label(&tr("弹出"))]);
     let detect_btn = gtk::Button::with_label(&tr("测定偏移"));
