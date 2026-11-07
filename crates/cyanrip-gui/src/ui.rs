@@ -119,8 +119,11 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
     // 一个按钮做完整刷新：重扫 /dev/sr* → 选中项读 TOC → 自动识别元数据
     let rescan_btn = gtk::Button::with_label(&tr("刷新"));
     rescan_btn.set_tooltip_text(Some(&tr("重新扫描光驱并读取当前碟片")));
-    let eject_btn = gtk::Button::with_label(&tr("弹出"));
+    // 通用「弹出」图标（Adwaita/Yaru 都有 media-eject-symbolic）
+    let eject_btn = gtk::Button::from_icon_name("media-eject-symbolic");
+    eject_btn.add_css_class("flat");
     eject_btn.set_tooltip_text(Some(&tr("弹出光驱托盘")));
+    eject_btn.update_property(&[gtk::accessible::Property::Label(&tr("弹出"))]);
     let detect_btn = gtk::Button::with_label(&tr("测定偏移"));
     let offset_spin = gtk::SpinButton::with_range(-2000.0, 2000.0, 1.0);
     offset_spin.set_value(state.borrow().offset() as f64);
