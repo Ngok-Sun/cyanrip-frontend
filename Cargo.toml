@@ -26,6 +26,8 @@ directories = "5"
 gtk = { package = "gtk4", version = "0.9" }
 libadwaita = { version = "0.7", features = ["v1_4", "v1_5"] }
 gettext-rs = "0.7"
+sha1 = "0.10"
+ureq = { version = "2", features = ["json"] }
 
 [profile.release]
 lto = "thin"

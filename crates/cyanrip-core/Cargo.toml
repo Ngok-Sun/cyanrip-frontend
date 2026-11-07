@@ -19,3 +19,5 @@ async-channel.workspace = true
 tracing.workspace = true
 chrono.workspace = true
 directories.workspace = true
+sha1.workspace = true
+ureq.workspace = true

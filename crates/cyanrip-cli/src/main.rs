@@ -7,11 +7,11 @@
 //! ```
 
 use anyhow::{bail, Context, Result};
-use cyanrip_core::disc;
 use cyanrip_core::event::Event;
 use cyanrip_core::model::fmt_duration;
 use cyanrip_core::rip::{self, RipOptions};
-use std::path::PathBuf;
+use cyanrip_core::{disc, meta, tag};
+use std::path::{Path, PathBuf};
 
 fn main() {
     // 管道被下游关闭（如 `| head`）时安静退出，而不是 panic
@@ -34,6 +34,8 @@ fn real_main() -> Result<()> {
         "parse-log" => parse_log_cmd(&args[1..]),
         "rip" => rip_cmd(&args[1..]),
         "eject" => eject_cmd(&args[1..]),
+        "match" => match_cmd(&args[1..]),
+        "tag" => tag_cmd(&args[1..]),
         "-h" | "--help" | "help" => {
             usage();
             Ok(())
@@ -50,7 +52,9 @@ fn usage() {
          \x20 cyanrip-cli probe   [--device /dev/sr0] [--json]\n\
          \x20 cyanrip-cli parse-log <file> [--json]\n\
          \x20 cyanrip-cli rip     [--device /dev/sr0] [--offset 48] [--log FILE] [-- <cyanrip 参数>...]\n\
-         \x20 cyanrip-cli eject   [--device /dev/sr0] [--close]\n"
+         \x20 cyanrip-cli eject   [--device /dev/sr0] [--close]\n\
+         \x20 cyanrip-cli match   [--device /dev/sr0] [--json]\n\
+         \x20 cyanrip-cli tag     --dir <抓轨目录> --root <归档根> [--release-index N] [--no-cover]\n"
     );
 }
 
@@ -58,6 +62,74 @@ fn flag_value(args: &[String], name: &str) -> Option<String> {
     args.iter()
         .position(|a| a == name)
         .and_then(|i| args.get(i + 1).cloned())
+}
+
+fn match_cmd(args: &[String]) -> Result<()> {
+    let device = flag_value(args, "--device").unwrap_or_else(|| "/dev/sr0".into());
+    let info = disc::probe(&PathBuf::from(&device))?;
+    let id = meta::disc_id(&info).unwrap_or_default();
+    println!("DiscID: {id}");
+    let rels = meta::resolve(&info, None);
+    if rels.is_empty() {
+        println!("MusicBrainz 没有匹配");
+        return Ok(());
+    }
+    if args.iter().any(|a| a == "--json") {
+        println!("{}", serde_json::to_string_pretty(&rels)?);
+        return Ok(());
+    }
+    for (i, r) in rels.iter().enumerate() {
+        println!(
+            "[{i}] {} — {} ({}, {}) score={}%  {}/{}  tracks={}",
+            r.artist,
+            r.title,
+            r.date.clone().unwrap_or_default(),
+            r.country.clone().unwrap_or_default(),
+            r.score,
+            r.source.as_str(),
+            r.id,
+            r.tracks.len()
+        );
+    }
+    Ok(())
+}
+
+fn tag_cmd(args: &[String]) -> Result<()> {
+    let dir = flag_value(args, "--dir").context("需要 --dir <抓轨输出目录>")?;
+    let root = flag_value(args, "--root").context("需要 --root <归档根目录>")?;
+    let index: usize = flag_value(args, "--release-index")
+        .map(|v| v.parse())
+        .transpose()?
+        .unwrap_or(0);
+    let device = flag_value(args, "--device").unwrap_or_else(|| "/dev/sr0".into());
+
+    let info = disc::probe(&PathBuf::from(&device))?;
+    let files = tag::flac_files(Path::new(&dir));
+    if files.is_empty() {
+        anyhow::bail!("{} 里没有 FLAC", dir);
+    }
+    let rels = meta::resolve(&info, files.first().map(|p| p.as_path()));
+    let release = rels
+        .get(index)
+        .with_context(|| format!("没有第 {index} 个候选发行版"))?;
+    println!(
+        "使用：{} — {}（{}，score {}%）",
+        release.artist,
+        release.title,
+        release.source.as_str(),
+        release.score
+    );
+    let cover = if args.iter().any(|a| a == "--no-cover") {
+        None
+    } else {
+        release
+            .cover_url
+            .as_deref()
+            .and_then(|u| meta::download_cover(u).ok())
+    };
+    let dest = tag::apply(&files, release, Path::new(&root), (1, 1), cover.as_deref())?;
+    println!("已归档到 {}", dest.display());
+    Ok(())
 }
 
 fn eject_cmd(args: &[String]) -> Result<()> {

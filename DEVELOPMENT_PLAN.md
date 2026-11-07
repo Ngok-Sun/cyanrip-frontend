@@ -1,6 +1,6 @@
 # cyanrip-frontend 开发计划
 
-> 状态：M1（core + CLI）与 M2（GUI 五页）已完成并通过真碟验收，下一步 M3（元数据与标签）
+> 状态：M1（core + CLI）、M2（GUI 五页）、M3（元数据与标签）已完成并通过真碟验收，下一步 M4（队列与打磨）
 > 实施进度见 §15，自测开关见 §16
 > 编写日期：2026-11-06
 > 目标平台：Linux（GNOME / Wayland 优先），Rust + GTK4 + libadwaita
@@ -485,11 +485,37 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 - i18n 骨架：所有可见字符串走 gettext，初始化 `po/zh_CN.po`
 - 验收：真碟（Quartet）全程鼠标操作完成抓轨，结果与命令行一致；切换 `LANG` 不出现空白文案
 
-### M3 — 元数据与标签（预计 1.5 天）
-- MB → AcoustID → Discogs 三级链路 + 缓存 + 限速
-- 元数据页（候选选择、映射预览、手工指定）
-- `lofty` 标签写入 + 封面内嵌 + 写后校验
-- 验收：Quartet 自动带标签归档；花儿 CD1 走人工匹配后正确归档
+### M3 — 元数据与标签（已完成，2026-11-07）
+
+**实现**
+- `meta::discid`：自行实现 MusicBrainz Disc ID（SHA-1 + libdiscid 的 base64 变体），
+  单测直接对照 cyanrip 日志里的真实 ID `kC9g0ZX9IMTELLEHE.ETxsZyaMg-`
+- `meta::musicbrainz`：按 discid 查发行版（含曲目时长）
+- `meta::discogs`：按条码搜索、取发行版详情（曲目、厂牌、目录号、封面），token 读
+  `~/.config/discogs/token` 或 `CYANRIP_DISCOGS_TOKEN`
+- `meta::acoustid`：`fpcalc` 指纹 + AcoustID 查询（需 `CYANRIP_ACOUSTID_KEY`）
+- `disc::probe` 增加 MCN 读取（`CDROM_GET_MCN`）——很多商业碟的 MCN 就是条码
+- 解析顺序：MB(discid) → Discogs(MCN/条码) → AcoustID+Discogs(关键字)，按轨数/时长打分
+- `tag`：重命名并归档到 `艺人/专辑/`，`metaflac` 写 Vorbis comment，保留 ReplayGain/AcoustID，
+  可内嵌封面；写后可用 `flac -t` 校验
+- GUI：结果页新增「元数据」区块——自动识别（`auto_tag_after_rip` 开启时）或手动「识别元数据」，
+  下拉选择候选后「写入标签」
+- CLI 新增 `match`（列出候选）与 `tag`（写标签归档）
+
+**验收**
+- `cyanrip-cli match`（久石譲 Quartet）：DiscID 与 cyanrip 一致；MB 无此压片（404），
+  走 MCN 条码命中 Discogs `15601039`，13 轨
+- `cyanrip-cli tag`：归档到 `Joe Hisaishi/Quartet (Original Soundtrack)/01 Main Theme.flac`，
+  TITLE/ALBUM/TRACKTOTAL=13/DATE/LABEL/UPCH-1105/BARCODE/DISCOGS_RELEASE 全部正确，
+  ReplayGain 保留，`flac -t` 通过
+- GUI（`CYANRIP_GUI_AUTORIP=1 CYANRIP_GUI_AUTOAPPLY=1`，真机 + 真网络）：
+  `META candidates=1 → applied=/tmp/.../Joe Hisaishi/Quartet (Original Soundtrack)`
+- 34 个测试全绿，clippy 0 警告
+
+**已知限制**
+- 多碟装的 DISCNUMBER/DISCTOTAL 目前固定写 `1/1`，需要界面提供碟号选择（M4）
+- 未识别碟（如花儿 CD2）在 MB 无 discid、无 MCN、无 AcoustID key 时无候选，只能手工补
+- 封面优先 Discogs primary 图；MB 候选走 Cover Art Archive
 
 ### M4 — 打磨与扩展（预计 1–2 天）
 - 队列/多碟、自动换碟、失败重试

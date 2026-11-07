@@ -37,7 +37,13 @@ pub struct AppState {
 impl AppState {
     pub fn new() -> Self {
         let config_path = Settings::default_path();
-        let settings = Settings::load(&config_path).unwrap_or_default();
+        let mut settings = Settings::load(&config_path).unwrap_or_default();
+        // 自测用：临时把输出根目录指到别处，避免污染真实音乐库
+        if let Ok(root) = std::env::var("CYANRIP_GUI_ROOT") {
+            if !root.trim().is_empty() {
+                settings.output.root = PathBuf::from(root);
+            }
+        }
         let device = settings.device.path.display().to_string();
         Self {
             settings,

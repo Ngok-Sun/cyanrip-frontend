@@ -2,7 +2,7 @@
 
 cyanrip 的原生 GTK4 前端（Rust）。设计文档见 [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)。
 
-当前状态：**M2 完成**（core + CLI + GTK4 五页 GUI，已通过真碟验收）。下一步 M3：元数据与标签。
+当前状态：**M3 完成**（core + CLI + GUI + 元数据识别与标签写入，均已真碟验证）。下一步 M4：队列与打磨。
 
 ## 结构
 
@@ -39,7 +39,8 @@ cargo build --release -p cyanrip-gui && ./target/release/cyanrip-frontend
 - **碟片**：设备下拉（带型号，切换即探测）、重新扫描、探测、弹出、读偏移 + 测定偏移、全选/取消全选、逐轨勾选；换碟后 1.5s 内自动刷新列表
 - **进度**：双进度条 + 终端风格单行状态（`Ripping track 5, progress - 47.32%, ETA - 2m · 2.3x · 已用 12:40`）；日志只保留真实输出行
 - **结果**：结论句 + 概览（设备/偏移/C2/AR ID/错误数…）+ 逐轨 EAC CRC32 / AR v1 / AR v2 / confidence / 状态表
-- **设置**：设备与驱动 / 输出 / 元数据（M3 占位）/ 行为（提示音、托盘、通知、关机）/ 高级 / **应用**（显式保存 + 恢复默认）
+- **结果页「元数据」**：抓轨后自动识别（MusicBrainz → Discogs 条码/MCN → AcoustID），下拉选候选后「写入标签」，自动归档到 `艺人/专辑/` 并写 FLAC 标签
+- **设置**：设备与驱动 / 输出 / 元数据 / 行为（提示音、托盘、通知、关机）/ 高级 / **应用**（显式保存 + 恢复默认）
 
 ## 自测开关
 
@@ -50,7 +51,11 @@ cargo build --release -p cyanrip-gui && ./target/release/cyanrip-frontend
 | `CYANRIP_GUI_SELFTEST=1` | 保存流程 / 全选 / 设备下拉断言 |
 | `CYANRIP_GUI_EJECTTEST=1` | 点击"弹出"并检查托盘状态，自动收回 |
 | `CYANRIP_GUI_STANDALONE=1` | 允许多实例（与已开窗口并存） |
-| `CYANRIP_GUI_DEBUG=1` | 打印介质状态跳变 |
+| `CYANRIP_GUI_DEBUG=1` | 打印介质状态跳变与元数据进度 |
+| `CYANRIP_GUI_AUTOAPPLY=1` | 识别到候选后自动写标签（测试用） |
+| `CYANRIP_GUI_FAKE_META=1` | 用合成候选替代联网识别（只测 UI 链路） |
+| `CYANRIP_GUI_ROOT=<dir>` | 临时覆盖输出根目录，避免污染音乐库 |
+| `CYANRIP_DISCOGS_TOKEN` / `CYANRIP_ACOUSTID_KEY` | 元数据源凭据（Discogs 也可用 `~/.config/discogs/token`） |
 
 ## 用法
 

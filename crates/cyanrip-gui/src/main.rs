@@ -30,9 +30,11 @@ fn main() -> glib::ExitCode {
         ui::probe_disc(&ui, &state);
         if let Some(d) = state.borrow().disc.clone() {
             println!(
-                "DISC {} tracks, {}",
+                "DISC {} tracks, {}, device={}, leadout={}",
                 d.audio_track_count(),
-                cyanrip_core::model::fmt_duration(d.total_duration())
+                cyanrip_core::model::fmt_duration(d.total_duration()),
+                d.device.display(),
+                d.leadout_lsn
             );
         }
 
@@ -52,14 +54,22 @@ fn main() -> glib::ExitCode {
             let st2 = state.clone();
             let app2 = app.clone();
             let ui2 = ui.clone();
+            let wait_ticks = std::rc::Rc::new(std::cell::Cell::new(0u32));
             glib::timeout_add_local(std::time::Duration::from_millis(500), move || {
                 match st2.borrow().phase {
                     state::Phase::Done => {
+                        // 给元数据识别 / 写入留出时间（最多 12 秒）
+                        if wait_ticks.get() < 24 {
+                            wait_ticks.set(wait_ticks.get() + 1);
+                            return glib::ControlFlow::Continue;
+                        }
                         let r = st2.borrow().report.clone().unwrap_or_default();
                         let widgets = ui2.result_body.observe_children().n_items();
                         println!(
-                            "AUTORIP_OK {}/{} RESULT_WIDGETS={widgets}",
-                            r.tracks_accurate, r.tracks_ripped
+                            "AUTORIP_OK {}/{} RESULT_WIDGETS={widgets} META_STATUS={}",
+                            r.tracks_accurate,
+                            r.tracks_ripped,
+                            ui2.meta_status.text()
                         );
                         app2.quit();
                         glib::ControlFlow::Break

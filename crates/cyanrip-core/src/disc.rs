@@ -17,6 +17,7 @@ use std::path::{Path, PathBuf};
 const CDROMREADTOCHDR: libc::c_ulong = 0x5305;
 const CDROMREADTOCENTRY: libc::c_ulong = 0x5306;
 const CDROM_DRIVE_STATUS: libc::c_ulong = 0x5326;
+const CDROM_GET_MCN: libc::c_ulong = 0x5311;
 const CDROMEJECT: libc::c_ulong = 0x5309;
 const CDROMCLOSETRAY: libc::c_ulong = 0x5319;
 
@@ -148,7 +149,7 @@ pub fn probe(device: &Path) -> Result<DiscInfo> {
         total_frames,
         disc_id: None,
         cddb_id: None,
-        mcn: None,
+        mcn: read_mcn(&dev),
         ar_in_db: None,
     })
 }
@@ -192,6 +193,35 @@ pub fn drive_attrs(device: &Path) -> (String, String, Option<String>) {
         get("model").unwrap_or_else(|| "unknown".into()),
         get("rev"),
     )
+}
+
+/// `struct cdrom_mcn`
+#[repr(C)]
+#[derive(Default)]
+struct Mcn {
+    code: [u8; 14],
+}
+
+/// 读取碟片 MCN（媒体目录号，很多商业碟就是条码）。
+fn read_mcn(dev: &Device) -> Option<String> {
+    let mut m = Mcn::default();
+    let r = unsafe { libc::ioctl(dev.fd, CDROM_GET_MCN, &mut m as *mut Mcn) };
+    if r < 0 {
+        return None;
+    }
+    let s: String = m
+        .code
+        .iter()
+        .take_while(|b| **b != 0)
+        .map(|b| *b as char)
+        .collect();
+    let s = s.trim().trim_matches('\0').to_string();
+    // 空值或全 0 视为没有 MCN
+    if s.is_empty() || s.chars().all(|c| c == '0') {
+        None
+    } else {
+        Some(s)
+    }
 }
 
 /// 光驱/介质状态。

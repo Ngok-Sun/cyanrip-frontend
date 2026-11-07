@@ -9,8 +9,10 @@ use adw::prelude::*;
 use cyanrip_core::config::Settings;
 use cyanrip_core::disc;
 use cyanrip_core::event::Event;
+use cyanrip_core::meta::{self, MetaRelease};
 use cyanrip_core::model::{fmt_duration, ArState, DiscInfo, RipReport};
 use cyanrip_core::rip::{self, RipOptions};
+use cyanrip_core::tag;
 use gtk::{glib, Orientation};
 use libadwaita as adw;
 use std::cell::RefCell;
@@ -19,6 +21,14 @@ use std::rc::Rc;
 use std::sync::mpsc;
 use std::time::Duration;
 use tokio::sync::watch;
+
+/// 元数据工作线程 → UI 的消息
+#[derive(Debug)]
+pub enum MetaOutcome {
+    Candidates(Vec<MetaRelease>, Option<PathBuf>),
+    Applied(PathBuf),
+    ApplyFailed(String),
+}
 
 pub struct Ui {
     pub window: adw::ApplicationWindow,
@@ -50,6 +60,14 @@ pub struct Ui {
     // 结果页
     pub result_summary: gtk::Label,
     pub result_body: gtk::Box,
+    pub meta_box: gtk::Box,
+    pub meta_status: gtk::Label,
+    pub meta_dropdown: gtk::DropDown,
+    pub meta_identify_btn: gtk::Button,
+    pub meta_apply_btn: gtk::Button,
+    pub meta_candidates: RefCell<Vec<MetaRelease>>,
+    pub meta_rx: RefCell<Option<mpsc::Receiver<MetaOutcome>>>,
+    pub last_rip_dir: RefCell<Option<PathBuf>>,
     pub open_output_btn: gtk::Button,
     pub copy_log_btn: gtk::Button,
     // 设置页
@@ -207,6 +225,28 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
         .child(&result_body)
         .build();
 
+    // 元数据区块（抓轨完成后自动识别，也可手动触发）
+    let meta_status = gtk::Label::new(Some(&tr("抓轨完成后可识别元数据")));
+    meta_status.set_xalign(0.0);
+    meta_status.add_css_class("dim-label");
+    let meta_dropdown = gtk::DropDown::from_strings(&["—"]);
+    meta_dropdown.set_hexpand(true);
+    let meta_identify_btn = gtk::Button::with_label(&tr("识别元数据"));
+    let meta_apply_btn = gtk::Button::with_label(&tr("写入标签"));
+    meta_apply_btn.add_css_class("suggested-action");
+    meta_apply_btn.set_sensitive(false);
+    let meta_row = gtk::Box::new(Orientation::Horizontal, 8);
+    meta_row.append(&meta_dropdown);
+    meta_row.append(&meta_identify_btn);
+    meta_row.append(&meta_apply_btn);
+    let meta_box = gtk::Box::new(Orientation::Vertical, 8);
+    let meta_title = gtk::Label::new(Some(&tr("元数据")));
+    meta_title.set_xalign(0.0);
+    meta_title.add_css_class("heading");
+    meta_box.append(&meta_title);
+    meta_box.append(&meta_status);
+    meta_box.append(&meta_row);
+
     let open_output_btn = gtk::Button::with_label(&tr("打开输出目录"));
     let copy_log_btn = gtk::Button::with_label(&tr("复制日志"));
     let result_actions = gtk::Box::new(Orientation::Horizontal, 8);
@@ -282,6 +322,14 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
         cancel_btn,
         result_summary,
         result_body,
+        meta_box,
+        meta_status,
+        meta_dropdown,
+        meta_identify_btn,
+        meta_apply_btn,
+        meta_candidates: RefCell::new(Vec::new()),
+        meta_rx: RefCell::new(None),
+        last_rip_dir: RefCell::new(None),
         open_output_btn,
         copy_log_btn,
         paranoia_spin,
@@ -304,6 +352,7 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
     connect_signals(&ui, &state);
     start_event_pump(&ui, &state);
     start_media_watch(&ui, &state);
+    start_meta_pump(&ui, &state);
     window.present();
     ui
 }
@@ -597,6 +646,19 @@ fn connect_signals(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
             }
             ui2.toast.add_toast(adw::Toast::new(&tr("正在取消…")));
         });
+    }
+    // 元数据：识别 / 写入
+    {
+        let ui2 = ui.clone();
+        let st = state.clone();
+        ui.meta_identify_btn
+            .connect_clicked(move |_| start_meta_resolve(&ui2, &st));
+    }
+    {
+        let ui2 = ui.clone();
+        let st = state.clone();
+        ui.meta_apply_btn
+            .connect_clicked(move |_| apply_meta(&ui2, &st));
     }
     // 结果页动作
     {
@@ -1282,6 +1344,12 @@ fn handle_event(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>, ev: Event) {
                 st.settings.clone()
             };
             fill_result(ui, state, &report);
+            let root = settings.output.root.clone();
+            let dir = tag::newest_rip_dir(&root);
+            *ui.last_rip_dir.borrow_mut() = dir;
+            if settings.behavior.auto_tag_after_rip {
+                start_meta_resolve(ui, state);
+            }
             ui.cancel_btn.set_sensitive(false);
             ui.start_btn.set_sensitive(true);
             ui.stack.set_visible_child_name("result");
@@ -1539,6 +1607,9 @@ fn fill_result(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>, report: &RipReport) {
         }
     }
     ui.result_body.append(&table);
+    ui.result_body
+        .append(&gtk::Separator::new(Orientation::Horizontal));
+    ui.result_body.append(&ui.meta_box);
 }
 
 /// cyanrip 风格的 ETA：`45s` / `2m` / `1h 3m`
@@ -1551,6 +1622,146 @@ fn fmt_eta(d: Duration) -> String {
     } else {
         format!("{s}s")
     }
+}
+
+/// 后台识别元数据（阻塞的 HTTP 调用放线程里）。
+fn start_meta_resolve(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
+    let Some(disc) = state.borrow().disc.clone() else {
+        ui.toast
+            .add_toast(adw::Toast::new(&tr("请先放入并探测碟片")));
+        return;
+    };
+    let root = state.borrow().settings.output.root.clone();
+    ui.meta_status.set_text(&tr("识别中…"));
+    ui.meta_apply_btn.set_sensitive(false);
+    let (tx, rx) = mpsc::channel();
+    *ui.meta_rx.borrow_mut() = Some(rx);
+    std::thread::spawn(move || {
+        let dir = tag::newest_rip_dir(&root);
+        let files = dir.as_ref().map(|d| tag::flac_files(d)).unwrap_or_default();
+        // 自测钩子：不联网，用一条合成候选验证 UI → 打标签链路
+        if std::env::var("CYANRIP_GUI_FAKE_META").as_deref() == Ok("1") {
+            let release = MetaRelease {
+                source: cyanrip_core::meta::MetaSource::Discogs,
+                id: "0".into(),
+                title: "测试专辑".into(),
+                artist: "测试艺人".into(),
+                date: Some("2026".into()),
+                country: None,
+                label: None,
+                catno: None,
+                barcode: None,
+                tracks: vec![cyanrip_core::meta::MetaTrack {
+                    number: 1,
+                    title: "测试曲目".into(),
+                    length: None,
+                }],
+                cover_url: None,
+                score: 100,
+            };
+            let _ = tx.send(MetaOutcome::Candidates(vec![release], dir));
+            return;
+        }
+        let out = meta::resolve(&disc, files.first().map(|p| p.as_path()));
+        let _ = tx.send(MetaOutcome::Candidates(out, dir));
+    });
+}
+
+/// 把选中候选写入标签并归档。
+fn apply_meta(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
+    let idx = ui.meta_dropdown.selected() as usize;
+    let release = ui.meta_candidates.borrow().get(idx).cloned();
+    let Some(release) = release else {
+        return;
+    };
+    let Some(dir) = ui.last_rip_dir.borrow().clone() else {
+        ui.toast
+            .add_toast(adw::Toast::new(&tr("找不到这次抓轨的目录")));
+        return;
+    };
+    let root = state.borrow().settings.output.root.clone();
+    ui.meta_status.set_text(&tr("写入标签中…"));
+    ui.meta_apply_btn.set_sensitive(false);
+    let (tx, rx) = mpsc::channel();
+    *ui.meta_rx.borrow_mut() = Some(rx);
+    std::thread::spawn(move || {
+        let files = tag::flac_files(&dir);
+        let cover = release
+            .cover_url
+            .as_deref()
+            .and_then(|u| meta::download_cover(u).ok());
+        let out = match tag::apply(&files, &release, &root, (1, 1), cover.as_deref()) {
+            Ok(d) => MetaOutcome::Applied(d),
+            Err(e) => MetaOutcome::ApplyFailed(format!("{e:#}")),
+        };
+        let _ = tx.send(out);
+    });
+}
+
+fn start_meta_pump(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
+    let ui2 = ui.clone();
+    let st = state.clone();
+    glib::timeout_add_local(Duration::from_millis(200), move || {
+        let msg = {
+            let rx = ui2.meta_rx.borrow();
+            rx.as_ref().and_then(|r| r.try_recv().ok())
+        };
+        if let Some(msg) = msg {
+            match msg {
+                MetaOutcome::Candidates(list, dir) => {
+                    if std::env::var("CYANRIP_GUI_DEBUG").as_deref() == Ok("1") {
+                        eprintln!("META candidates={}", list.len());
+                    }
+                    *ui2.last_rip_dir.borrow_mut() = dir;
+                    if list.is_empty() {
+                        ui2.meta_status
+                            .set_text(&tr("没有找到匹配的发行版（可换 Discogs token 或手工补）"));
+                        ui2.meta_apply_btn.set_sensitive(false);
+                    } else {
+                        let labels: Vec<String> = list
+                            .iter()
+                            .map(|r| {
+                                format!(
+                                    "{} — {}（{}，{}，score {}%）",
+                                    r.artist,
+                                    r.title,
+                                    r.date.clone().unwrap_or_else(|| "年份未知".into()),
+                                    r.source.as_str(),
+                                    r.score
+                                )
+                            })
+                            .collect();
+                        let refs: Vec<&str> = labels.iter().map(String::as_str).collect();
+                        ui2.meta_dropdown
+                            .set_model(Some(&gtk::StringList::new(&refs)));
+                        ui2.meta_dropdown.set_selected(0);
+                        ui2.meta_status
+                            .set_text(&format!("{} {}", tr("找到候选："), list.len()));
+                        ui2.meta_apply_btn.set_sensitive(true);
+                        *ui2.meta_candidates.borrow_mut() = list;
+                        if std::env::var("CYANRIP_GUI_AUTOAPPLY").as_deref() == Ok("1") {
+                            apply_meta(&ui2, &st);
+                        }
+                    }
+                }
+                MetaOutcome::Applied(dir) => {
+                    if std::env::var("CYANRIP_GUI_DEBUG").as_deref() == Ok("1") {
+                        eprintln!("META applied={}", dir.display());
+                    }
+                    ui2.meta_status
+                        .set_text(&format!("{} {}", tr("已归档到"), dir.display()));
+                    ui2.toast.add_toast(adw::Toast::new(&tr("标签写入完成")));
+                }
+                MetaOutcome::ApplyFailed(e) => {
+                    ui2.meta_status
+                        .set_text(&format!("{} {e}", tr("写入失败：")));
+                    ui2.meta_apply_btn.set_sensitive(true);
+                }
+            }
+            let _ = &st;
+        }
+        glib::ControlFlow::Continue
+    });
 }
 
 fn play_done_sound(settings: &Settings) {

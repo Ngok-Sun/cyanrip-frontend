@@ -7,9 +7,11 @@ pub mod config;
 pub mod disc;
 pub mod event;
 pub mod logparse;
+pub mod meta;
 pub mod model;
 pub mod progress;
 pub mod rip;
+pub mod tag;
 
 pub use event::{Event, Stage};
 pub use model::{
