@@ -79,6 +79,8 @@ pub struct Ui {
     pub cover_btn: gtk::Button,
     pub export_btn: gtk::Button,
     pub export_rx: RefCell<Option<mpsc::Receiver<ExportMsg>>>,
+    /// 弹出托盘的后台结果
+    pub eject_rx: RefCell<Option<mpsc::Receiver<anyhow::Result<()>>>>,
     /// (release key, 本地文件)；key = "来源:发行版 id"
     pub cover_cache: RefCell<Option<(String, PathBuf)>>,
     /// 正在下载的候选 key，避免重复请求（Google 有配额）
@@ -445,6 +447,7 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
         cover_btn,
         export_btn,
         export_rx: RefCell::new(None),
+        eject_rx: RefCell::new(None),
         cover_cache: RefCell::new(None),
         cover_inflight: RefCell::new(None),
         cover_failed: RefCell::new(None),
@@ -774,21 +777,14 @@ fn connect_signals(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
         let st = state.clone();
         ui.eject_btn.connect_clicked(move |_| {
             let device = selected_device(&ui2);
-            match disc::eject(Path::new(&device)) {
-                Ok(()) => {
-                    {
-                        let mut s = st.borrow_mut();
-                        s.disc = None;
-                        s.selected.clear();
-                    }
-                    refresh_disc(&ui2, &st);
-                    ui2.start_btn.set_sensitive(false);
-                    ui2.toast.add_toast(adw::Toast::new(&tr("托盘已弹出")));
-                }
-                Err(e) => ui2
-                    .toast
-                    .add_toast(adw::Toast::new(&format!("{}: {e}", tr("弹出失败")))),
-            }
+            // `eject` 会等托盘动作完成（数百毫秒到数秒），放主线程会触发“未响应”
+            ui2.eject_btn.set_sensitive(false);
+            let (tx, rx) = mpsc::channel();
+            *ui2.eject_rx.borrow_mut() = Some(rx);
+            std::thread::spawn(move || {
+                let _ = tx.send(disc::eject(Path::new(&device)));
+            });
+            let _ = &st;
         });
     }
     // 重新扫描设备
@@ -1235,18 +1231,12 @@ pub fn probe_disc(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
             start_meta_resolve(ui, state);
         }
         Err(e) => {
-            state.borrow_mut().disc = None;
-            refresh_disc(ui, state);
-            ui.start_btn.set_sensitive(false);
+            clear_disc_ui(ui, state);
             let empty = !matches!(
                 disc::media_status(Path::new(&device)),
                 cyanrip_core::disc::MediaStatus::Ok
             );
-            if empty {
-                // 只是没放碟 / 托盘开着：更新状态即可，不用弹错误
-                ui.disc_summary.set_text(&tr("没有碟片"));
-                ui.meta_label.set_text(&tr("未识别 · 没有碟片"));
-            } else {
+            if !empty {
                 ui.toast
                     .add_toast(adw::Toast::new(&format!("{}: {e}", tr("探测失败"))));
             }
@@ -1646,13 +1636,8 @@ fn start_media_watch(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
                     }
                 }
                 _ => {
-                    let mut s = st.borrow_mut();
-                    if s.disc.is_some() {
-                        s.disc = None;
-                        s.selected.clear();
-                        drop(s);
-                        refresh_disc(&ui2, &st);
-                        ui2.start_btn.set_sensitive(false);
+                    if st.borrow().disc.is_some() {
+                        clear_disc_ui(&ui2, &st);
                     }
                 }
             }
@@ -2248,6 +2233,29 @@ fn image_ext(path: &Path) -> &'static str {
     "img"
 }
 
+/// 碟片离开（弹出/换碟/探测失败）：把曲目、元数据、封面、摘要一起清掉
+fn clear_disc_ui(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
+    {
+        let mut s = state.borrow_mut();
+        s.disc = None;
+        s.selected.clear();
+        s.meta_releases.clear();
+        s.track_titles.clear();
+        s.meta_pending = false;
+    }
+    ui.meta_label.set_text(&tr("未识别 · 没有碟片"));
+    ui.meta_dropdown.set_visible(false);
+    ui.meta_status.set_text(&tr("等待碟片"));
+    ui.meta_apply_btn.set_sensitive(false);
+    *ui.cover_cache.borrow_mut() = None;
+    *ui.cover_failed.borrow_mut() = None;
+    *ui.cover_inflight.borrow_mut() = None;
+    show_cover_placeholder(ui, &tr("无封面"));
+    refresh_disc(ui, state);
+    ui.disc_summary.set_text(&tr("没有碟片"));
+    ui.start_btn.set_sensitive(false);
+}
+
 /// 当前勾选的封面刮削器
 fn collect_cover_sources(ui: &Rc<Ui>) -> Vec<String> {
     let mut out = Vec::new();
@@ -2534,25 +2542,45 @@ fn start_meta_pump(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
             rx.as_ref().and_then(|r| r.try_recv().ok())
         };
         if let Some((key, res)) = cover {
-            if ui2.cover_inflight.borrow().as_deref() == Some(key.as_str()) {
+            if st.borrow().disc.is_none() {
                 *ui2.cover_inflight.borrow_mut() = None;
-            }
-            match res {
-                Ok(path) => {
-                    *ui2.cover_failed.borrow_mut() = None;
-                    if std::env::var("CYANRIP_GUI_DEBUG").as_deref() == Ok("1") {
-                        let size = std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
-                        eprintln!("COVER key={key} bytes={size}");
+            } else {
+                if ui2.cover_inflight.borrow().as_deref() == Some(key.as_str()) {
+                    *ui2.cover_inflight.borrow_mut() = None;
+                }
+                match res {
+                    Ok(path) => {
+                        *ui2.cover_failed.borrow_mut() = None;
+                        if std::env::var("CYANRIP_GUI_DEBUG").as_deref() == Ok("1") {
+                            let size = std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
+                            eprintln!("COVER key={key} bytes={size}");
+                        }
+                        *ui2.cover_cache.borrow_mut() = Some((key, path.clone()));
+                        show_cover(&ui2, &path);
                     }
-                    *ui2.cover_cache.borrow_mut() = Some((key, path.clone()));
-                    show_cover(&ui2, &path);
+                    Err(e) => {
+                        *ui2.cover_failed.borrow_mut() = Some(key.clone());
+                        show_cover_placeholder(&ui2, &tr("封面下载失败"));
+                        ui2.toast
+                            .add_toast(adw::Toast::new(&format!("{}: {e}", tr("封面下载失败"))));
+                    }
                 }
-                Err(e) => {
-                    *ui2.cover_failed.borrow_mut() = Some(key.clone());
-                    show_cover_placeholder(&ui2, &tr("封面下载失败"));
-                    ui2.toast
-                        .add_toast(adw::Toast::new(&format!("{}: {e}", tr("封面下载失败"))));
+            }
+        }
+        let eject = {
+            let rx = ui2.eject_rx.borrow();
+            rx.as_ref().and_then(|r| r.try_recv().ok())
+        };
+        if let Some(res) = eject {
+            ui2.eject_btn.set_sensitive(true);
+            match res {
+                Ok(()) => {
+                    clear_disc_ui(&ui2, &st);
+                    ui2.toast.add_toast(adw::Toast::new(&tr("托盘已弹出")));
                 }
+                Err(e) => ui2
+                    .toast
+                    .add_toast(adw::Toast::new(&format!("{}: {e}", tr("弹出失败")))),
             }
         }
         let export = {
@@ -2592,6 +2620,13 @@ fn start_meta_pump(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
             match msg {
                 MetaOutcome::Candidates(list, dir) => {
                     st.borrow_mut().meta_pending = false;
+                    // 碟片已经弹出/换掉：这是上一张碟的识别结果，直接丢弃
+                    if st.borrow().disc.is_none() {
+                        if std::env::var("CYANRIP_GUI_DEBUG").as_deref() == Ok("1") {
+                            eprintln!("META stale result dropped");
+                        }
+                        return glib::ControlFlow::Continue;
+                    }
                     if std::env::var("CYANRIP_GUI_DEBUG").as_deref() == Ok("1") {
                         eprintln!(
                             "META candidates={} titles={:?}",

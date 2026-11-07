@@ -285,6 +285,7 @@ fn main() -> glib::ExitCode {
             });
             let st3 = state.clone();
             let app2 = app.clone();
+            let ui3 = ui.clone();
             glib::timeout_add_local(std::time::Duration::from_millis(2600), move || {
                 let dev = st3.borrow().device.clone();
                 let res = cyanrip_core::disc::probe(std::path::Path::new(&dev));
@@ -292,6 +293,22 @@ fn main() -> glib::ExitCode {
                     "EJECTTEST probe_after_click={:?}",
                     res.err().map(|e| e.to_string())
                 );
+                let st = st3.borrow();
+                println!(
+                    "EJECTTEST state disc={:?} selected={} meta={} titles={} summary={:?}",
+                    st.disc.is_some(),
+                    st.selected.len(),
+                    st.meta_releases.len(),
+                    st.track_titles.len(),
+                    ui3.disc_summary.text()
+                );
+                println!(
+                    "EJECTTEST ui cover_visible={} meta_label={:?} start_enabled={}",
+                    ui3.cover_picture.is_visible(),
+                    ui3.meta_label.text(),
+                    ui3.start_btn.is_sensitive()
+                );
+                drop(st);
                 let closed = cyanrip_core::disc::close_tray(std::path::Path::new(&dev));
                 println!("EJECTTEST close={closed:?}");
                 app2.quit();
