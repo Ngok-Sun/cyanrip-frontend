@@ -330,6 +330,9 @@ language = "zh"               # 本阶段只打包 zh，其余语言留接口
 - **导出 CUE + 封面**：把当前候选写成单镜像风格 CUE（PERFORMER/TITLE/REM DATE/DISCNUMBER/
   TOTALDISCS/CATALOG + 逐轨 INDEX，时间按 TOC 起算，UTF-8 BOM），同时把封面图复制成
   `<专辑>.jpg`；未启用任何刮削器时只导出 CUE
+- **HDCD 复选框**（开始抓轨上方）：「这张碟是 HDCD（20-bit 解码）」。cyanrip 不自动检测，
+  由用户判断；勾选后加 `-H`，输出 24-bit FLAC（体积约 +50%），日志里会打印
+  `HDCD detected: yes, peak_extend…`；换碟/弹出时自动复位
 - **开始抓轨**：不再放标题栏，改为**专辑候选下拉框正下方**居中的大按钮
   （320×64，1.35em 粗体，`suggested-action` 强调色，圆角 14px）
 - **元数据条**（曲目表上方）：识别状态 + 候选下拉 +「导入曲目信息」（选 CUE 表，用于数据库

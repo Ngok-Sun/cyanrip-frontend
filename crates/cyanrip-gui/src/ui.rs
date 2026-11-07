@@ -78,6 +78,7 @@ pub struct Ui {
     pub cover_placeholder: gtk::Label,
     pub cover_btn: gtk::Button,
     pub export_btn: gtk::Button,
+    pub hdcd_check: gtk::CheckButton,
     pub export_rx: RefCell<Option<mpsc::Receiver<ExportMsg>>>,
     /// 弹出托盘的后台结果
     pub eject_rx: RefCell<Option<mpsc::Receiver<anyhow::Result<()>>>>,
@@ -157,6 +158,16 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
     start_btn.add_css_class("rip-primary");
     start_btn.set_sensitive(false);
     start_btn.set_size_request(320, 64);
+
+    // HDCD：由用户判断（cyanrip 不会自动检测），勾了才会加 -H
+    let hdcd_check = gtk::CheckButton::with_label(&tr("这张碟是 HDCD（20-bit 解码）"));
+    hdcd_check.set_tooltip_text(Some(&tr(
+        "不确定就别勾。勾选后 cyanrip 用 HDCD 解码，输出为 24-bit FLAC（体积约 +50%）",
+    )));
+    hdcd_check.set_halign(gtk::Align::Center);
+    let hdcd_row = gtk::Box::new(Orientation::Horizontal, 0);
+    hdcd_row.set_halign(gtk::Align::Center);
+    hdcd_row.append(&hdcd_check);
 
     // 放在碟片信息与曲目列表之间，水平居中
     let start_row = gtk::Box::new(Orientation::Horizontal, 0);
@@ -250,6 +261,7 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
     info_text.append(&disc_summary);
     info_text.append(&disc_meta_box);
     // 紧跟在「专辑/候选」下拉框下面
+    info_text.append(&hdcd_row);
     info_text.append(&start_row);
     let info_row = gtk::Box::new(Orientation::Horizontal, 12);
     info_row.append(&cover_area);
@@ -446,6 +458,7 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
         cover_placeholder,
         cover_btn,
         export_btn,
+        hdcd_check,
         export_rx: RefCell::new(None),
         eject_rx: RefCell::new(None),
         cover_cache: RefCell::new(None),
@@ -1459,7 +1472,8 @@ pub fn start_rip(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
             st.meta_pending
         );
     }
-    let args = build_cyanrip_args(&st.settings, &info, &selected, meta.as_ref());
+    let hdcd = ui.hdcd_check.is_active();
+    let args = build_cyanrip_args(&st.settings, &info, &selected, meta.as_ref(), hdcd);
     if std::env::var("CYANRIP_GUI_DEBUG").as_deref() == Ok("1") {
         eprintln!("RIP selected={selected:?} args={args:?}");
     }
@@ -1504,6 +1518,7 @@ fn build_cyanrip_args(
     info: &DiscInfo,
     selected: &[u32],
     meta: Option<&MetaRelease>,
+    hdcd: bool,
 ) -> Vec<String> {
     let mut args = vec![
         "-Z".to_string(),
@@ -1518,6 +1533,10 @@ fn build_cyanrip_args(
     ];
     if settings.rip.overread {
         args.push("-O".into());
+    }
+    // 用户判断是 HDCD 才解码；cyanrip 本身不做检测
+    if hdcd {
+        args.push("-H".into());
     }
     // 抓轨前就已识别的元数据直接交给 cyanrip：文件名、标签、日志一次到位
     if let Some(rel) = meta {
@@ -1677,6 +1696,9 @@ fn auto_probe_disc(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) -> bool {
         (off, !same)
     };
     ui.offset_spin.set_value(offset as f64);
+    if changed {
+        ui.hdcd_check.set_active(false);
+    }
     refresh_disc(ui, state);
     sync_select_all(ui, state);
     ui.start_btn.set_sensitive(true);
@@ -2254,6 +2276,7 @@ fn clear_disc_ui(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
     *ui.cover_failed.borrow_mut() = None;
     *ui.cover_inflight.borrow_mut() = None;
     show_cover_placeholder(ui, &tr("无封面"));
+    ui.hdcd_check.set_active(false);
     refresh_disc(ui, state);
     ui.disc_summary.set_text(&tr("没有碟片"));
     ui.start_btn.set_sensitive(false);
@@ -2817,4 +2840,43 @@ fn send_notification(title: &str, body: &str) {
         .arg(title)
         .arg(body)
         .spawn();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cyanrip_core::model::TrackInfo;
+
+    fn dummy_disc() -> DiscInfo {
+        DiscInfo {
+            device: "/dev/sr0".into(),
+            vendor: "PIONEER".into(),
+            model: "DVR-106D".into(),
+            firmware: Some("1.00".into()),
+            tracks: vec![TrackInfo {
+                number: 1,
+                start_lsn: 0,
+                duration_frames: 7500,
+                is_audio: true,
+                title: None,
+                isrc: None,
+            }],
+            leadout_lsn: 7500,
+            total_frames: 7500,
+            disc_id: None,
+            cddb_id: None,
+            mcn: None,
+            ar_in_db: None,
+        }
+    }
+
+    #[test]
+    fn hdcd_flag_is_passed_only_when_checked() {
+        let settings = Settings::default();
+        let disc = dummy_disc();
+        let without = build_cyanrip_args(&settings, &disc, &[1], None, false);
+        let with = build_cyanrip_args(&settings, &disc, &[1], None, true);
+        assert!(!without.iter().any(|a| a == "-H"));
+        assert!(with.iter().any(|a| a == "-H"));
+    }
 }
