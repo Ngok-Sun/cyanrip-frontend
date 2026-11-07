@@ -574,6 +574,7 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 - 抓轨时补 `-a disc=N:totaldiscs=M`，并用 `-D "{album} CD{disc} [{format}]"` 分目录，
   两张碟同时抓不会写同一个文件夹
 - `tag::apply` 以发行版碟号为准：`DISCNUMBER/DISCTOTAL` 正确，文件名带 `CD1-`/`CD2-`
+- 封面除了内嵌进 FLAC，还会在专辑目录里单独存一份 `cover.jpg` / `cover.png`
 - 目标文件已存在时仍按「报错不覆盖」处理，避免并发误盖
 
 **并发抓双碟时踩的坑（2026-11-07）**

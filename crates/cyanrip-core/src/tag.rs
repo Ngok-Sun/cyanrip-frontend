@@ -108,7 +108,31 @@ pub fn apply(
                 .status();
         }
     }
+    // 封面除了内嵌，也单独存一份到专辑目录（播放器/文件管理器常用）
+    if let Some(cover) = cover {
+        let dest = dest_dir.join(format!("cover.{}", image_ext(cover)));
+        if !dest.exists() {
+            let _ = std::fs::copy(cover, &dest);
+        }
+    }
     Ok(dest_dir)
+}
+
+/// 按文件头判断图片扩展名（jpeg/png/其它）
+fn image_ext(path: &Path) -> &'static str {
+    use std::io::Read;
+    let mut magic = [0u8; 4];
+    if let Ok(mut f) = std::fs::File::open(path) {
+        if f.read_exact(&mut magic).is_ok() {
+            if magic[..2] == [0xFF, 0xD8] {
+                return "jpg";
+            }
+            if magic == *b"\x89PNG" {
+                return "png";
+            }
+        }
+    }
+    "img"
 }
 
 fn write_tags(
