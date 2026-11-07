@@ -119,6 +119,18 @@ pub struct Ui {
 }
 
 pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
+    // 主操作按钮的样式（GTK 里按钮字号只能靠 CSS 放大）
+    if let Some(display) = gtk::gdk::Display::default() {
+        let provider = gtk::CssProvider::new();
+        provider.load_from_data(
+            ".rip-primary { font-size: 1.35em; font-weight: 800; padding: 10px 34px; border-radius: 14px; letter-spacing: 1px; }",
+        );
+        gtk::style_context_add_provider_for_display(
+            &display,
+            &provider,
+            gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+        );
+    }
     let window = adw::ApplicationWindow::builder()
         .application(app)
         .title(tr("cyanrip 前端"))
@@ -140,8 +152,16 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
 
     let start_btn = gtk::Button::with_label(&tr("开始抓轨"));
     start_btn.add_css_class("suggested-action");
+    start_btn.add_css_class("rip-primary");
     start_btn.set_sensitive(false);
-    header.pack_end(&start_btn);
+    start_btn.set_size_request(320, 64);
+
+    // 放在碟片信息与曲目列表之间，水平居中
+    let start_row = gtk::Box::new(Orientation::Horizontal, 0);
+    start_row.set_halign(gtk::Align::Center);
+    start_row.set_margin_top(4);
+    start_row.set_margin_bottom(4);
+    start_row.append(&start_btn);
 
     // ---------- 碟片页 ----------
     // 设备下拉：列出系统里所有 /dev/sr*，标签附带型号
@@ -252,6 +272,7 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
     disc_page.set_margin_end(12);
     disc_page.append(&device_box);
     disc_page.append(&info_row);
+    disc_page.append(&start_row);
     disc_page.append(&select_row);
     disc_page.append(&track_scroll);
 
