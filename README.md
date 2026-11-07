@@ -84,7 +84,9 @@ gtk-update-icon-cache -f -t ~/.local/share/icons/hicolor
 
 ## 界面语言
 
-默认中文（msgid 即中文）。`po/en.po` 是语言机制验证，编译后放到
+设置 → 行为 → **界面语言** 可选「跟随系统 / 中文 / English」，写入 `ui.language`，**重启程序生效**。
+
+默认中文（msgid 即中文）。`po/en.po` 是英文翻译，编译后放到
 `po/en/LC_MESSAGES/cyanrip-frontend.mo` 或 `~/.local/share/locale/en/LC_MESSAGES/`：
 
 ```bash
