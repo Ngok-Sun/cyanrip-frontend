@@ -2,7 +2,7 @@
 
 cyanrip 的原生 GTK4 前端（Rust）。设计文档见 [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)。
 
-当前状态：**M2 完成**（core + CLI + GTK4 五页 GUI）。
+当前状态：**M2 完成**（core + CLI + GTK4 五页 GUI，已通过真碟验收）。下一步 M3：元数据与标签。
 
 ## 结构
 
@@ -30,17 +30,27 @@ cargo test          # 22 个单测 + 2 个流式/取消集成测试，全部离�
 ```bash
 cargo run -p cyanrip-gui            # 调试
 cargo build --release -p cyanrip-gui && ./target/release/cyanrip-frontend
+# 或直接运行已安装版本
+~/.local/bin/cyanrip-frontend
 ```
 
-界面：顶部切换「碟片 / 进度 / 结果 / 设置」。碟片页填设备与偏移 → 探测 → 勾选曲目 → 开始抓轨；
-抓轨中显示本轨与总进度、倍速、已用/剩余、实时日志；完成后结果页列出每轨 EAC CRC32 与 AR 状态。
+界面：顶部切换「碟片 / 进度 / 结果 / 设置」。
 
-自测开关（不需要人工点界面）：
+- **碟片**：设备下拉（带型号，切换即探测）、重新扫描、探测、弹出、读偏移 + 测定偏移、全选/取消全选、逐轨勾选；换碟后 1.5s 内自动刷新列表
+- **进度**：双进度条 + 终端风格单行状态（`Ripping track 5, progress - 47.32%, ETA - 2m · 2.3x · 已用 12:40`）；日志只保留真实输出行
+- **结果**：结论句 + 概览（设备/偏移/C2/AR ID/错误数…）+ 逐轨 EAC CRC32 / AR v1 / AR v2 / confidence / 状态表
+- **设置**：设备与驱动 / 输出 / 元数据（M3 占位）/ 行为（提示音、托盘、通知、关机）/ 高级 / **应用**（显式保存 + 恢复默认）
 
-```bash
-CYANRIP_GUI_SMOKE=1   timeout 20 ./target/debug/cyanrip-frontend   # 只构建并退出
-CYANRIP_GUI_AUTORIP=1 timeout 400 ./target/debug/cyanrip-frontend  # 只抓第一轨，打印结果后退出
-```
+## 自测开关
+
+| 变量 | 作用 |
+|---|---|
+| `CYANRIP_GUI_SMOKE=1` | 构建 + 探测后 2 秒退出 |
+| `CYANRIP_GUI_AUTORIP=1` | 界面驱动单轨抓轨，打印 `AUTORIP_OK n/m` |
+| `CYANRIP_GUI_SELFTEST=1` | 保存流程 / 全选 / 设备下拉断言 |
+| `CYANRIP_GUI_EJECTTEST=1` | 点击"弹出"并检查托盘状态，自动收回 |
+| `CYANRIP_GUI_STANDALONE=1` | 允许多实例（与已开窗口并存） |
+| `CYANRIP_GUI_DEBUG=1` | 打印介质状态跳变 |
 
 ## 用法
 
@@ -69,3 +79,5 @@ cargo run -p cyanrip-cli -- rip --device /dev/sr0 --offset 48 -- -Z 2 -P 3 -o fl
 
 - `CDROMREADTOCHDR` 是 **0x5305**，不是 0x5302（0x5302 是 `CDROMRESUME`）。写错时 ioctl 返回 0、缓冲区一个字节都不写，属于静默失败——本项目踩过一次。
 - 全碟进度依赖 TOC 的轨长；用 `-l` 只抓部分轨时，ETA 仍按整碟估算。
+- 本机经 SiI3811 桥接：`CDROMEJECT` ioctl 会被拒绝（内核日志 `0x53/0x02 MEDIUM REMOVAL PREVENTED`）且返回 0（假成功），必须走 util-linux `eject`（SCSI `START STOP UNIT`）路径。
+- `AdwApplicationWindow` 不支持 `set_titlebar`，标题栏要用 `adw::ToolbarView` 承载。
