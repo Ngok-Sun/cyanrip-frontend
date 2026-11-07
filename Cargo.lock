@@ -209,7 +209,7 @@ dependencies = [
 
 [[package]]
 name = "cyanrip-cli"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "async-channel",
@@ -222,7 +222,7 @@ dependencies = [
 
 [[package]]
 name = "cyanrip-core"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "async-channel",
@@ -243,7 +243,7 @@ dependencies = [
 
 [[package]]
 name = "cyanrip-gui"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "async-channel",

@@ -1,8 +1,8 @@
 # cyanrip-frontend 开发计划
 
-> 状态：M1（core + CLI）、M2（GUI 五页）、M3（元数据与标签）已完成并通过真碟验收；
+> 状态：**v1.0 完成**（2026-11-08）。M1–M4 全部交付并通过真碟验收；后续改动走 1.x 维护分支。
 > M3 之后的交互/封面/多碟/多实例/HDCD 等增补也已完成（见 §15.3）。
-> 剩余：失败重试、设置项接线、多语言验证、可选 flatpak（§15.4）；**队列/自动换碟已取消**
+> 后续（1.x，可选）：取消语义细化、flatpak（个人使用不考虑）。**队列/自动换碟、`-S` 选速均不做**
 > 实施进度见 §15，自测开关见 §16，变更日志见 §17
 > 编写日期：2026-11-06
 > 目标平台：Linux（GNOME / Wayland 优先），Rust + GTK4 + libadwaita
@@ -687,7 +687,7 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 - 未识别碟（如花儿 CD2）在 MB 无 discid、无 MCN、无 AcoustID key 时无候选，只能手工补
 - 封面优先 Discogs primary 图；MB 候选走 Cover Art Archive
 
-### M4 — 打磨与扩展（进行中）
+### M4 — 打磨与扩展（已完成，2026-11-08 验收）
 
 已完成：应用图标与桌面项、多实例、封面三级兜底与多选、CUE 导入/导出、HDCD 勾选、
 归档模板接线（§8.4）、失败重试、快捷键、英文 `po/en.po` 验证。
@@ -882,7 +882,7 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 - 全碟进度按**实际勾选的轨**折算（之前勾 1 轨只走到 ~8% 就到头）
 - AccurateRip：v2 未命中不再抹掉 v1 的精确命中；v1 也记录 confidence
 
-### M4 — 剩余工作
+### M4 — 剩余工作（转入 1.x 待办，不阻塞 1.0）
 
 - ~~`-S` 速度档位接线~~ **不做**（2026-11-08：实测本机两台光驱都忽略选速，
   S=0/4/16 同一轨均 30s，加了也是摆设）
@@ -894,6 +894,24 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 ---
 
 ---
+
+### 1.0 交付验收（2026-11-08）
+
+**功能**：碟片探测/设备切换/偏移测定与记忆、曲目勾选、抓轨（FLAC/WAV、-Z 校验、HDCD 可选解码）、
+实时单行进度 + 倍速 + ETA、EAC/AR 结果表、元数据识别（MB → AcoustID → Discogs，含套装分碟）、
+CUE 导入/导出、封面三级兜底（CAA → Discogs → Google）与内嵌、归档模板、标签写入、
+双光驱双实例并行、提示音/通知/关机、中英界面、快捷键。
+
+**验证**（真碟，非模拟）：
+- 花儿乐队《幸福的旁边》CD1/CD2：CD1 15/16、CD2 8/8 命中 AR（第 16 轨该压片未入库），EAC CRC 与 CLI 一致
+- 久石譲《Quartet》13 轨：AR v2 conf 8；元数据/封面/归档全链路
+- 邓丽君《淡淡幽情》12 轨：单轨抓轨进度 99.8%、模板归档、日志随档
+- 双光驱同时抓两张碟：各自 AR 命中，输出目录按 DiscID 区分
+- HDCD 碟：勾选后 24-bit FLAC，日志确认 `HDCD detected: yes`
+- 测试 53 个全绿，clippy 0 警告
+
+**已知限制**：单实例（新启动会激活旧窗口）、语言切换需重启、本机光驱忽略 `-S` 选速、
+不做队列/自动换碟、不做 flatpak。
 
 ## 16. 自测开关（GUI）
 
@@ -926,6 +944,8 @@ CYANRIP_GUI_STANDALONE=1 CYANRIP_GUI_SELFTEST=1 ./target/debug/cyanrip-frontend
 
 | commit | 日期 | 说明 |
 |---|---|---|
+| `a62eff1` | 11-08 | docs: drop -S speed setting (drives ignore it) |
+| `5570168` | 11-08 | hardening: fix blocking/panic/offset/timeout issues found in final review |
 | `0b049b5` | 11-08 | i18n: translate hardcoded 轨 unit and remaining literals |
 | `1f47e2f` | 11-08 | i18n: extract trm() strings (-ktrm) so settings group titles translate |
 | `15acdb7` | 11-08 | i18n: complete English translations (143 msgids) + coverage test |
@@ -980,4 +1000,4 @@ CYANRIP_GUI_STANDALONE=1 CYANRIP_GUI_SELFTEST=1 ./target/debug/cyanrip-frontend
 | `47ae591` | 11-07 | M1 verified on real disc: fix CDROMREADTOCHDR ioctl, monotonic multi-pass progress, sane speed/ETA |
 | `cd8423a` | 11-07 | M1: cyanrip-core + cyanrip-cli (TOC probe, progress/log parsing, rip orchestration) |
 
-> 功能验收记录见 §15，踩坑见 §14.1；本文档最后一次整体校对：2026-11-08（与 HEAD 对齐）。
+> 功能验收记录见 §15，踩坑见 §14.1；v1.0 文档定稿：2026-11-08。
