@@ -64,7 +64,6 @@ pub struct Ui {
     pub meta_status: gtk::Label,
     pub meta_label: gtk::Label,
     pub meta_dropdown: gtk::DropDown,
-    pub meta_identify_btn: gtk::Button,
     pub meta_apply_btn: gtk::Button,
     pub meta_rx: RefCell<Option<mpsc::Receiver<MetaOutcome>>>,
     pub last_rip_dir: RefCell<Option<PathBuf>>,
@@ -149,10 +148,8 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
     let meta_dropdown = gtk::DropDown::from_strings(&["—"]);
     meta_dropdown.set_hexpand(true);
     meta_dropdown.set_visible(false);
-    let meta_identify_btn = gtk::Button::with_label(&tr("重新识别"));
     let meta_row = gtk::Box::new(Orientation::Horizontal, 8);
     meta_row.append(&meta_dropdown);
-    meta_row.append(&meta_identify_btn);
     let disc_meta_box = gtk::Box::new(Orientation::Vertical, 6);
     disc_meta_box.append(&meta_label);
     disc_meta_box.append(&meta_row);
@@ -338,7 +335,6 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
         meta_status,
         meta_label,
         meta_dropdown,
-        meta_identify_btn,
         meta_apply_btn,
         meta_rx: RefCell::new(None),
         last_rip_dir: RefCell::new(None),
@@ -660,12 +656,6 @@ fn connect_signals(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
         });
     }
     // 元数据：识别 / 写入
-    {
-        let ui2 = ui.clone();
-        let st = state.clone();
-        ui.meta_identify_btn
-            .connect_clicked(move |_| start_meta_resolve(&ui2, &st));
-    }
     {
         let ui2 = ui.clone();
         let st = state.clone();
