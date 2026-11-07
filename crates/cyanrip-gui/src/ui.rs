@@ -487,6 +487,24 @@ fn connect_signals(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
         ui.detect_btn
             .connect_clicked(move |_| detect_offset(&ui2, &st));
     }
+    // 设备下拉切换 → 自动探测
+    {
+        let ui2 = ui.clone();
+        let st = state.clone();
+        ui.device_dropdown.connect_selected_notify(move |_| {
+            if *ui2.syncing_device.borrow() {
+                return;
+            }
+            probe_disc(&ui2, &st);
+        });
+    }
+    // 重新扫描设备
+    {
+        let ui2 = ui.clone();
+        let st = state.clone();
+        ui.rescan_btn
+            .connect_clicked(move |_| rescan_devices(&ui2, &st));
+    }
     // 偏移变化 → 记到配置
     {
         let st = state.clone();
