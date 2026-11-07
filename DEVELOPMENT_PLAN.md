@@ -1,7 +1,9 @@
 # cyanrip-frontend 开发计划
 
-> 状态：M1（core + CLI）、M2（GUI 五页）、M3（元数据与标签）已完成并通过真碟验收，下一步 M4（队列与打磨）
-> 实施进度见 §15，自测开关见 §16
+> 状态：M1（core + CLI）、M2（GUI 五页）、M3（元数据与标签）已完成并通过真碟验收；
+> M3 之后的交互/封面/多碟/多实例/HDCD 等增补也已完成（见 §15.3）。
+> 剩余：队列与自动换碟为主（§15.4）
+> 实施进度见 §15，自测开关见 §16，变更日志见 §17
 > 编写日期：2026-11-06
 > 目标平台：Linux（GNOME / Wayland 优先），Rust + GTK4 + libadwaita
 > 关联技能：`cyanrip-cd-ripping`（抓轨流程、驱动坑、元数据链路）
@@ -46,7 +48,7 @@
 | cyanrip | ≥ 0.9.4（含 MEDIA_CHECK 限流） | `/usr/local/bin/cyanrip` 0.9.4-rc3 ✅ |
 | cdrdao | 任意 | 1.2.4 ✅（读 TOC / ISRC） |
 | fpcalc (chromaprint) | 1.5+ | 1.5.1 ✅ |
-| metaflac / flac | 1.4+ | 1.4.3 ✅（验证用，标签走 lofty） |
+| metaflac / flac | 1.4+ | 1.4.3 ✅（**标签写入与 PICTURE 内嵌都用 metaflac**） |
 | canberra-gtk-play | 任意（提示音） | ✅ 已安装；回退 `pw-play` |
 
 安装命令：
@@ -61,13 +63,15 @@ sudo apt install -y libgtk-4-dev libadwaita-1-dev build-essential pkg-config
 ### 2.2 Rust crates
 
 - GUI：`gtk4`、`libadwaita`（`gtk4` crate 需与系统 GTK 版本匹配，0.9.x 支持 4.10+）
-- 异步：`tokio`（process、io-util、sync、time）、`async-channel`
+- 异步：`tokio`（process / io-util / sync / time / rt-multi-thread）、`async-channel`
 - 序列化：`serde`、`serde_json`、`toml`
-- 网络：`reqwest`（rustls，避免 OpenSSL 版本纠缠）
-- 标签：`lofty`（FLAC Vorbis comment + picture 读写）
+- 网络：`ureq`（rustls，`json` 特性；无 async 运行时负担）
+- Disc ID：`sha1`（自行拼串 + libdiscid 的 base64 变体）
+- CUE 编码：`encoding_rs`（UTF-8 → GBK 回退）
+- 标签：调用 `metaflac`（不引 lofty；已用真碟验证不会动音频流）
 - 错误：`thiserror`（库层）、`anyhow`（应用层）
-- 日志：`tracing`、`tracing-subscriber`
-- 其他：`directories`、`chrono`、`urlencoding`、`regex`、`unicode-normalization`
+- 日志：`tracing`（CLI）
+- 其他：`directories`、`chrono`、`regex`、`libc`（ioctl）
 - 国际化：`gettext-rs`（配合 `xgettext` 提取，`po/zh_CN.po` 随包）
 - 提示音不引入 Rust 依赖：调用 `canberra-gtk-play` / `pw-play`，避免为一段音效拉 gstreamer-rs 及 dev 头文件
 
@@ -106,7 +110,7 @@ cyanrip-frontend/
    │     event.rs                 # 事件枚举（UI 唯一输入）
    │     job.rs                   # 任务/队列状态机
    │     config.rs                # 配置读写与默认值
-   │     tag.rs                   # FLAC 标签与封面写入（lofty）
+   │     tag.rs                   # FLAC 标签与封面写入（metaflac）+ 归档/重命名
    │     meta/
    │       mod.rs                 # 元数据源抽象 + 优先级调度
    │       musicbrainz.rs
@@ -295,22 +299,26 @@ language = "zh"               # 本阶段只打包 zh，其余语言留接口
 ### 7.1 主窗口
 
 `AdwApplicationWindow`（1080×700），内容由 `AdwToolbarView` + `AdwHeaderBar` + `GtkStack` 组成
-（AdwApplicationWindow 不支持 `set_titlebar`，必须用 ToolbarView）。顶部 StackSwitcher 切页，右上角"开始抓轨"。
+（AdwApplicationWindow 不支持 `set_titlebar`，必须用 ToolbarView）。顶部 StackSwitcher 切页；
+「开始抓轨」不在标题栏，位于碟片信息区（见下）
 
 ```
-┌────────────────────────────────────────────────────────────┐
-│ 碟片 │ 进度 │ 结果 │ 设置                    [开始抓轨 ▸]  │
-├────────────────────────────────────────────────────────────┤
+┌────────────────────────────────────────────────────────────────────┐
+│ 碟片 │ 进度 │ 结果 │ 设置                                  [⚙]        │
+├────────────────────────────────────────────────────────────────────┤
 │ 设备 [/dev/sr0 · PIONEER DVD-RW DVR-106D ▾] [刷新] [⏏]              │
-│ 偏移 [48] [测定偏移]                                        │
-│ PIONEER DVD-RW DVR-106D 1.00 · 13 轨 · 41:22                │
-│ ☑ 全选                                                      │
-│ ┌────────────────────────────────────────────────────────┐ │
-│ │ ☑  01  未命名                                   3:18    │ │
-│ │ ☑  02  未命名                                   3:29    │ │
-│ │ ☐  03  未命名                                   2:08    │ │
-│ └────────────────────────────────────────────────────────┘ │
-└────────────────────────────────────────────────────────────┘
+│ 偏移 [48] [测定偏移]                                                │
+│ ┌────────┐  PIONEER DVD-RW DVR-106D 1.00 · 13 轨 · 41:22            │
+│ │        │  Yo‐Yo Ma — The Best of Yo‐Yo Ma（2004 · MusicBrainz）   │
+│ │ 封面   │  [候选专辑 ▾] [导入曲目信息] [导出 CUE + 封面]            │
+│ │180×180 │  ☐ 这张碟是 HDCD（20-bit 解码）                          │
+│ │[取得封面]│           [      开始抓轨      ]                        │
+│ └────────┘                                                          │
+│ ☑ 全选                                                              │
+│ ┌────────────────────────────────────────────────────────────────┐ │
+│ │ ☑  01  Suite No. 1 in G major, BWV 1007: I. Prelude     6:12   │ │
+│ └────────────────────────────────────────────────────────────────┘ │
+└────────────────────────────────────────────────────────────────────┘
 ```
 
 - 设备为 `GtkDropDown`，项来自 `/dev/sr*`，标签带 sysfs 读到的厂商+型号；切换即自动探测
@@ -469,25 +477,60 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 ### 8.1 识别链路
 
 ```
-碟片 TOC / discid
-  ├─ 1. MusicBrainz discid lookup            （最快，命中即有完整曲目）
-  ├─ 2. AcoustID 指纹（fpcalc 取 1–2 轨）     （MB 未命中时）
-  ├─ 3. Discogs：barcode / catalogno → release（确定压片版本与封面）
-  └─ 4. 失败：占位命名 + 结果页人工指定
+碟片 TOC + MCN（探测时即可得，不需要音频）
+  ├─ 0. 手工 CUE 表（最高优先，数据库查不到的碟）
+  ├─ 1. MusicBrainz discid lookup          → 按「本碟音轨数」挑 medium（套装）
+  ├─ 2. Discogs：MCN/条码 → release         → 按 position 前缀分碟
+  ├─ 3. AcoustID 指纹（fpcalc，需 key）     → 再用 Discogs 关键字兜底
+  └─ 4. 都失败：占位命名，界面提示导入 CUE
 ```
 
-实测经验：
+实现要点：
 
-- ISRC 不是 Discogs 的检索字段；只可用 MB `/ws/2/isrc/<code>` 做交叉校验
-- Discogs 时长常被四舍五入到整分秒，匹配容差取 ±4s
-- 中文碟常无 ISRC/CD-TEXT，指纹（Shazam/AcoustID）是有效兜底
+- **Disc ID 自行计算**（SHA-1 + libdiscid 的 base64 变体），单测对照 cyanrip 日志里的真值
+- **套装**：MB 的每个 medium、Discogs 的 `1-03` position 各自成候选，带 `disc_number/disc_total`；
+  抓轨传 `-a disc=N:totaldiscs=M` + `-D "{album} CD{disc} [{format}]"`，标签写
+  `DISCNUMBER/DISCTOTAL`，文件名带 `CD1-`/`CD2-`
+- **打分**：按轨数与逐轨时长（±4s）；Discogs 不填时长时按轨数给 60 分
+- **CUE 导入**：UTF-8（含 BOM）/GBK 自动解码；CUE 候选优先级最高，网络结果不会顶掉它
+- **识别时机**：探测成功即开始（后台线程），不阻塞界面；识别未完成就点抓轨会等它（≤15s）
+- 实测经验：
+  - ISRC 不是 Discogs 的检索字段；只能用于 MB 交叉校验
+  - Discogs 时长常四舍五入，容差取 ±4s
+  - 中文碟常无 ISRC/CD-TEXT，CUE 手工导入是最可靠的兜底
 
-### 8.2 写标签
+### 8.2 封面
 
-- `lofty` 直接写 FLAC Vorbis comment 与 PICTURE，不重编码
-- 字段：TITLE / ARTIST / ALBUM / ALBUMARTIST / DISCNUMBER / DISCTOTAL / TRACKNUMBER / TRACKTOTAL / DATE / LABEL / CATALOGNUMBER / BARCODE / GENRE / MUSICBRAINZ_ALBUMID / DISCOGS_RELEASE
-- 保留 cyanrip 写入的 REPLAYGAIN_* / R128_* / AcoustID 指纹
-- 写后自检：重新读取标签 + 调用 `flac -t` 校验流完整性（可选，结果页显示）
+```
+候选自带图（MB → Cover Art Archive / Discogs images）
+  → Discogs 兜底（条码 → 目录号 → 艺人+专辑）
+  → Google 自定义搜索（需 API Key + CX）
+```
+
+- 设置里三个刮削器可多选；**全不勾 = 完全不下图**，也不往 FLAC 里写图
+- 结果按「来源:id」缓存，写标签时复用；失败会记住该候选，自动流程不重试（点按钮可重来）
+- 同一候选的并发请求会去重（Google 免费额度 100 次/天）
+- 写标签时：内嵌 PICTURE，并在专辑目录额外存 `cover.jpg` / `cover.png`
+
+### 8.3 写标签
+
+- 用 `metaflac` 写 FLAC Vorbis comment 与 PICTURE（不改音频流）
+- 字段：TITLE / ARTIST / ALBUM / ALBUMARTIST / DISCNUMBER / DISCTOTAL / TRACKNUMBER / TRACKTOTAL /
+  DATE / LABEL / CATALOGNUMBER / BARCODE / MUSICBRAINZ_ALBUMID / DISCOGS_RELEASE
+- 保留 cyanrip 写入的 REPLAYGAIN_* / R128_* / 指纹等（先导出白名单，再 `--remove-all-tags` 后回写）
+- 归档路径 `艺人/专辑/`，套装加 `CD1-`/`CD2-` 前缀；目标已存在则报错不覆盖
+- 写前校验：源文件必须是完整 FLAC（`fLaC` 头 + 非空），避免搬走还在写的半成品
+- 空标题一律回退 `Track NN`，不会产生空白文件名
+
+### 8.4 HDCD
+
+- cyanrip **不做自动检测**，`-H/--hdcd` 默认关闭，日志里的 `HDCD decoding: disabled` 只是开关状态
+- 碟片页提供「这张碟是 HDCD（20-bit 解码）」复选框，勾选才传 `-H`
+- 勾选后输出 24-bit FLAC（体积约 +50%）；cyanrip 日志会回执
+  `HDCD detected: yes, peak_extend: enabled permanently, max_gain_adj: -4.0 dB`
+- 已验证：Reference Recordings RR-907CD 实测为 HDCD，解码前后电平差约 6 dB
+- 若以后做自动检测：`cdparanoia` 读 60s → `ffmpeg -af "hdcd=disable_autoconvert=0"`；
+  **必须带 `disable_autoconvert=0`**，否则滤镜不处理音频却照样打印 `HDCD detected: no`
 
 ---
 
@@ -524,13 +567,13 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 
 ## 11. 里程碑
 
-### M1 — 工程骨架与 core（预计 1 天）
+### M1 — 工程骨架与 core（已完成）
 - workspace、crate 划分、CI 脚本（`cargo fmt/clippy/test`）
 - `disc.rs`（cdrdao TOC 解析）、`progress.rs`、`logparse.rs` + 三份 fixture 单测
 - `rip.rs` 最小实现：启动 cyanrip、收集事件、日志落盘
 - 验收：`cargo test` 全绿；CLI 示例可跑完一张碟并打印结构化结果
 
-### M2 — GUI 五页成形（预计 2 天）
+### M2 — GUI 五页成形（已完成）
 - 主窗口、HeaderBar、ViewStack
 - 碟片页（设备、碟片信息、曲目表、勾选、快捷参数）
 - 设置页（五分类完整实现 + 模板预览 + 参数摘要条）
@@ -597,12 +640,16 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 - 未识别碟（如花儿 CD2）在 MB 无 discid、无 MCN、无 AcoustID key 时无候选，只能手工补
 - 封面优先 Discogs primary 图；MB 候选走 Cover Art Archive
 
-### M4 — 打磨与扩展（预计 1–2 天）
-- 队列/多碟、自动换碟、失败重试
-- 取消语义完善、错误页细化
-- 多语言机制验证：新增 `po/en.po`（不随包发布，仅验证不改代码即可加语言）、快捷键、应用图标
-- `cyanrip-cli`（与 `ripcd` **并存**，`ripcd` 作为轻量无头工具保留，不删除）
-- 可选 flatpak 打包
+### M4 — 打磨与扩展（进行中）
+- ✅ 应用图标与桌面项（app-id 对齐）
+- ✅ 多实例（两台光驱并行）+ 独立配置 + 关机互斥
+- ✅ 封面（三级兜底、多选刮削器、内嵌 + 目录存图）
+- ✅ CUE 导入 / 导出（含封面）
+- ✅ HDCD 用户勾选解码
+- ⬜ 队列 / 自动换碟 / 失败重试
+- ⬜ 取消语义完善、错误页细化
+- ⬜ 多语言验证（`po/en.po`）、快捷键
+- ⬜ 可选 flatpak 打包
 
 ---
 
@@ -639,6 +686,21 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 - C2：驱动不支持，校验依赖多遍比对
 - 速度：裸读 14.8x；cyanrip 0.9.2 因 `CDROM_MEDIA_CHANGED` 每帧查询仅 0.8x；0.9.4-rc3 约 1.5–3.8x
 - 一箱参考数据（log fixtures）：Quartet 13 轨/41:22、花儿 CD1 16 轨/46:17、花儿 CD2 8 轨/33:33
+
+### 14.1 GUI 踩坑清单
+
+- **AdwActionRow 默认 `use-markup=true`**：标题里的 `&`（如 `… tenor & orchestra`）会被当 Pango
+  标记解析，解析失败整行渲染为空白 → 动态标题必须 `.use_markup(false)`
+- **`eject` 会阻塞**：外部命令要等托盘动作，必须放后台线程，否则窗口被判「未响应」
+- **桌面项文件名必须等于 app-id**（`io.github.cyanrip.Frontend.desktop`），否则 Wayland 下
+  任务栏找不到入口、显示通用图标
+- **`Button::from_icon_name` 会加 `image-button` 类**，libadwaita 把它画成无边框；
+  要和文字按钮一致得用 `Button::new()` + `Image` + `text-button`
+- **Discogs token 失效返回 401**：应退回匿名请求，否则元数据和封面一起失效
+- **自测不能写真实配置**：`CYANRIP_GUI_ROOT` 生效时整份配置不落盘；selftest 只在
+  `CYANRIP_GUI_CONFIG` 存在时才写假 token
+- **ffmpeg hdcd 滤镜默认 `disable_autoconvert=true`**：格式不匹配时它不处理音频，
+  却仍打印 `HDCD detected: no`，会误判非 HDCD
 
 ---
 
@@ -695,19 +757,56 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 - `CDROMREADTOCHDR` 是 `0x5305`（`0x5302` 是 `CDROMRESUME`，返回 0 且不写缓冲区）
 - 本机经 SiI3811 桥接：`CDROMEJECT` 被 `MEDIUM REMOVAL PREVENTED` 拒绝，且 ioctl 返回 0（假成功），必须走 SCSI 路径
 
-### M3 — 元数据与标签（预计 1.5 天）
-- MB → AcoustID → Discogs 三级链路 + 缓存 + 限速
-- 元数据页（候选选择、映射预览、手工指定）
-- `lofty` 标签写入 + 封面内嵌 + 写后校验
-- 验收：Quartet 自动带标签归档；花儿 CD1 走人工匹配后正确归档
+### M3 — 元数据与标签（已完成，2026-11-07）
 
-### M4 — 打磨与扩展（预计 1–2 天）
-- 队列/多碟、自动换碟、失败重试
+**实现**
+- `meta::discid`：自行实现 MusicBrainz Disc ID，单测对照真值 `kC9g0ZX9IMTELLEHE.ETxsZyaMg-`
+- `meta::musicbrainz` / `meta::discogs` / `meta::acoustid` / `meta::cue` / `meta::google`
+- `disc::probe` 增加 MCN 读取（`CDROM_GET_MCN`），商业碟的 MCN 往往就是条码
+- `tag`：重命名 + 归档 + `metaflac` 写标签 + 内嵌封面 + `cover.jpg` 落盘
+- GUI：结果页「元数据」区块；CLI：`match` / `tag`
+
+**验收（真碟）**
+- Quartet：MB 无此压片 → MCN 条码命中 Discogs `15601039`，13 轨
+- 归档 `Joe Hisaishi/Quartet (Original Soundtrack)/01 Main Theme.flac`，标签与 ReplayGain 正确，`flac -t` 通过
+- 抓轨前识别（`META candidates=1` 早于 `RIP`），参数里带完整 `-a/-t`
+
+### M3.5 — 使用反馈驱动的增补（2026-11-07，已完成）
+
+| 反馈 / 需求 | 实现 | commit |
+|---|---|---|
+| 识别要在抓轨前，曲目表直接显示曲名 | 探测成功即后台识别；`track_titles` 注入列表；未识别完点抓轨会等待 | `25259a3` |
+| 「探测」和「重新识别」重复 | 删除「重新识别」，探测即识别 | `df8f54a` |
+| 「探测」和「重新扫描」重复 | 合并为「刷新」= 重扫设备 + 读 TOC + 识别 | `36e5d55` |
+| 弹出按钮用通用图标 | `media-eject-symbolic`；`from_icon_name` 会带 `image-button` 类导致无边框，改为 `Button::new` + `Image` + `text-button` | `6281c34` `90278d7` `a53e884` |
+| 看不到当前跑的是哪版 | 设置 → 高级 显示「程序构建时间」 | `32e617b` |
+| 文本类设置要能选 | 输出根目录改目录选择器；提示音改事件下拉（36 个）+ 试听 | `d24419f` |
+| 双光驱同时抓 | 独立配置 `CYANRIP_GUI_CONFIG` + `cyanrip-frontend-2` 启动器；实例锁；关机互斥 | `06ae895` |
+| 双碟套装会串轨/撞文件 | 按音轨数挑 medium / Discogs 分碟组；`-a disc=…` + `-D "{album} CD{disc}"`；`DISCNUMBER` 正确 | `8fd34bc` |
+| 设置里要能填 Discogs token | 掩码输入，存 `secrets.toml` 0600；旧 `~/.config/discogs/token` 自动回填 | `79308a5` |
+| 数据库里没有的碟要能手填曲目 | CUE 导入（UTF-8/GBK），作为最高优先候选 | `84d5b42` |
+| 碟片页要能看封面 | 封面预览 + 三级取图链 + 缓存 | `66a7f89` `b8dc13c` |
+| 封面兜底要能选来源 | 三个刮削器复选框，全不勾则不刮 | `dd6b9c9` |
+| 要能导出 CUE 和封面 | 单镜像 CUE（含 INDEX 时间）+ `<专辑>.jpg` | `3f5080f` |
+| 任务栏图标与启动器不一致 | 新图标 + 桌面项改名 = app-id + `set_icon_name` | `726b48d` |
+| 图标样式（RIP 字样） | 多轮调整：RIP 叠在盘面下缘、灰色、白描边 | `a4df532` `f7ebcb0` `f9d1648` |
+| 封面没跟着音频存 | 归档时额外写 `cover.jpg` / `cover.png` | `555b804` |
+| 「开始抓轨」要显眼 | 移到碟片页、320×64、1.35em、居中，最终放在候选下拉框正下方 | `8e07815` `1613068` |
+| 弹出后假死 + 信息残留 | `eject` 改后台线程；`clear_disc_ui` 统一清空；过期识别结果丢弃 | `d88ee17` |
+| 部分曲名空白 | `AdwActionRow` 默认 `use-markup=true`，`&` 解析失败导致空白 → 显式关闭 markup | `4b9efb4` |
+| HDCD 无法自动判断 | 碟片页加「这张碟是 HDCD」复选框，勾选才传 `-H`（输出 24-bit） | `40fc42f` |
+| Discogs token 失效导致无封面 | 401 时自动匿名重试；自测不再污染真实配置 | `ce4cf0b` |
+
+**验证基线**：40 单测 + 2 集成测试 + 1 个 GUI 参数拼装测试；clippy 0 警告；
+真碟并发（sr0/sr1 双碟套装）、CUE 导入导出、封面内嵌、HDCD 24-bit 均已实测。
+
+### M4 — 剩余工作
+
+- 队列 / 自动换碟 / 失败重试
 - 取消语义完善、错误页细化
-- 多语言机制验证：新增 `po/en.po`（不随包发布，仅验证不改代码即可加语言）、快捷键、应用图标
-- `cyanrip-cli`（与 `ripcd` **并存**，`ripcd` 作为轻量无头工具保留，不删除）
+- 多语言验证（`po/en.po`）、快捷键
 - 可选 flatpak 打包
-
+- 可选：HDCD 自动检测（读 60s + ffmpeg 分析，命中自动勾选）
 ---
 
 ---
@@ -721,7 +820,14 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 | `CYANRIP_GUI_SELFTEST=1` | 保存流程 + 全选 + 设备下拉断言，打印 `SELFTEST ...` |
 | `CYANRIP_GUI_EJECTTEST=1` | 模拟点击"弹出"，检查托盘状态并自动收回 |
 | `CYANRIP_GUI_STANDALONE=1` | 以 NON_UNIQUE 方式启动，允许与已开实例并存 |
-| `CYANRIP_GUI_DEBUG=1` | 打印介质状态跳变与自动重探结果 |
+| `CYANRIP_GUI_DEBUG=1` | 打印介质跳变、识别结果、封面/导出步骤 |
+| `CYANRIP_GUI_CONFIG=<path>` | 使用独立配置文件（多开/测试；配套 secrets 同名） |
+| `CYANRIP_GUI_ROOT=<dir>` | 临时覆盖输出根目录，且**不写回配置**（测试用） |
+| `CYANRIP_GUI_AUTOAPPLY=1` | 抓完自动写标签（与 AUTORIP 搭配做端到端） |
+| `CYANRIP_GUI_FAKE_META=1` | 用合成候选替代联网识别（只测 UI → 打标签链路） |
+| `CYANRIP_GUI_IMPORT_CUE=<file>` | 启动即导入指定 CUE 并打印前 3 轨标题 |
+| `CYANRIP_GUI_EXPORT_DIR=<dir>` | 启动即导出 CUE + 封面到指定目录 |
+| `CYANRIP_DISCOGS_TOKEN` / `CYANRIP_ACOUSTID_KEY` | 元数据源凭据（优先级高于界面设置） |
 
 用法示例：
 
@@ -729,3 +835,56 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 export XDG_RUNTIME_DIR=/run/user/$(id -u) WAYLAND_DISPLAY=wayland-0
 CYANRIP_GUI_STANDALONE=1 CYANRIP_GUI_SELFTEST=1 ./target/debug/cyanrip-frontend
 ```
+
+---
+
+## 17. 变更日志（按提交）
+
+| commit | 日期 | 说明 |
+|---|---|---|
+| `40fc42f` | 11-07 | disc page: user-controlled HDCD decoding checkbox (-H) |
+| `4b9efb4` | 11-07 | ui: disable markup on track rows (ampersand titles rendered blank) |
+| `d88ee17` | 11-07 | eject: run off the main thread and clear all disc UI state |
+| `1613068` | 11-07 | ui: place start-rip right under the album dropdown |
+| `c480354` | 11-07 | clippy: compare type name without allocation |
+| `8e07815` | 11-07 | ui: move start-rip into disc page as large centered button |
+| `555b804` | 11-07 | tagging: also save cover.jpg alongside audio |
+| `ce4cf0b` | 11-07 | discogs: retry anonymously on 401; keep selftest token out of real config |
+| `f9d1648` | 11-07 | icon: bigger RIP overlapping disc edge |
+| `f7ebcb0` | 11-07 | icon: larger centered disc, gray RIP overlay |
+| `a4df532` | 11-07 | icon: replace rip arrow with RIP lettering |
+| `726b48d` | 11-07 | app icon: ship matching icon and app-id desktop entry |
+| `3f5080f` | 11-07 | disc page: export CUE + cover image |
+| `dd6b9c9` | 11-07 | settings: multi-select cover scrapers (none = no cover art) |
+| `b8dc13c` | 11-07 | cover: add Google image search fallback (API key + CX) |
+| `66a7f89` | 11-07 | disc page: fetch and show cover art with Discogs fallback |
+| `f1b4208` | 11-07 | clippy: collapse consecutive replace in cue parser |
+| `84d5b42` | 11-07 | disc page: import track info from CUE (UTF-8/GBK) as top-priority candidate |
+| `79308a5` | 11-07 | settings: Discogs access token field stored in secrets.toml (0600) |
+| `8fd34bc` | 11-07 | multi-disc: pick medium per disc, disc-aware folders/tags, exact rip-dir by DiscID |
+| `06ae895` | 11-07 | support parallel instances: isolated config, per-instance lock, exact rip-dir pick |
+| `d24419f` | 11-07 | settings: directory picker for output root, sound event dropdown with preview |
+| `32e617b` | 11-07 | ui: show build time in settings to spot stale windows |
+| `a53e884` | 11-07 | ui: give eject icon button the same styling as text buttons |
+| `90278d7` | 11-07 | ui: drop flat style so eject button matches other buttons |
+| `6281c34` | 11-07 | ui: use media-eject icon for the eject button |
+| `36e5d55` | 11-07 | ui: merge rescan and probe into a single refresh button |
+| `df8f54a` | 11-07 | ui: drop redundant re-identify button (probe already identifies) |
+| `b1981de` | 11-07 | docs: describe pre-rip identification |
+| `25259a3` | 11-07 | M3: identify metadata before rip and show track titles on disc page |
+| `d1350e6` | 11-07 | M3: metadata (discid, MB, Discogs, AcoustID) and FLAC tagging with GUI/CLI |
+| `c0392bb` | 11-07 | docs: fold M2 follow-up changes into plan and README |
+| `5d2fda9` | 11-07 | gui: poll media status every 1.5s and auto-refresh track list on disc change |
+| `93937a0` | 11-07 | fix eject: CDROMEJECT is rejected on the SiI3811 bridge, fall back to util-linux eject (SCSI) |
+| `4b7685a` | 11-07 | gui/cli: eject button and eject/close-tray commands |
+| `fdc3142` | 11-07 | gui: wire device dropdown selection and rescan button |
+| `c32e897` | 11-07 | gui: device picker as dropdown with model labels and rescan |
+| `6897c95` | 11-07 | gui: richer result page — summary grid, verdict, per-track table |
+| `945af66` | 11-07 | gui: select all / deselect all checkbox with tri-state sync |
+| `5ace7d3` | 11-07 | gui: explicit save button on settings page with dirty state and restore-defaults |
+| `285cf49` | 11-07 | gui: keep progress out of the log pane, show one terminal-style status line |
+| `d4c6126` | 11-07 | M2: GTK4 GUI (disc/progress/result/settings pages), offset detection, e2e autorip verified |
+| `47ae591` | 11-07 | M1 verified on real disc: fix CDROMREADTOCHDR ioctl, monotonic multi-pass progress, sane speed/ETA |
+| `cd8423a` | 11-07 | M1: cyanrip-core + cyanrip-cli (TOC probe, progress/log parsing, rip orchestration) |
+
+> 更详细的功能验收记录见 §15（M1/M2/M3/M3.5），踩坑见 §14.1。
