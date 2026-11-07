@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: cyanrip-frontend\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-08 00:23+0900\n"
+"POT-Creation-Date: 2026-11-08 00:32+0900\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -304,189 +304,192 @@ msgstr "Detecting read offset: reads part of the disc, about 1–3 minutes"
 
 #: crates/cyanrip-gui/src/ui.rs:1385 crates/cyanrip-gui/src/ui.rs:2036
 msgid "读偏移"
-msgstr ""
+msgstr "Read offset"
 
 #: crates/cyanrip-gui/src/ui.rs:1390
 msgid "测定失败：这张碟可能不在 AccurateRip 数据库中"
-msgstr ""
+msgstr "Detection failed: this disc may not be in the AccurateRip database"
 
 #: crates/cyanrip-gui/src/ui.rs:1500
 msgid "未命名"
-msgstr ""
+msgstr "Untitled"
 
 #: crates/cyanrip-gui/src/ui.rs:1537 crates/cyanrip-gui/src/ui.rs:2547
 msgid "请先放入并探测碟片"
-msgstr ""
+msgstr "Insert a disc and probe it first"
 
 #: crates/cyanrip-gui/src/ui.rs:1542
 msgid "没有选中任何曲目"
-msgstr ""
+msgstr "No tracks selected"
 
 #: crates/cyanrip-gui/src/ui.rs:1585
 msgid "准备中…"
-msgstr ""
+msgstr "Preparing…"
 
 #: crates/cyanrip-gui/src/ui.rs:1735
 msgid "检测到新碟片，已刷新曲目"
-msgstr ""
+msgstr "New disc detected; track list refreshed"
 
-#: crates/cyanrip-gui/src/ui.rs:1821 crates/cyanrip-gui/src/ui.rs:1950
-#: crates/cyanrip-gui/src/ui.rs:2033 crates/cyanrip-gui/src/ui.rs:2100
-#: crates/cyanrip-gui/src/ui.rs:2208
-msgid "轨"
-msgstr ""
+#: crates/cyanrip-gui/src/ui.rs:1821
+msgid "曲目"
+msgstr "Track"
 
 #: crates/cyanrip-gui/src/ui.rs:1826
 msgid "总进度"
-msgstr ""
+msgstr "Overall"
 
 #: crates/cyanrip-gui/src/ui.rs:1838
 msgid "已用"
-msgstr ""
+msgstr "Elapsed"
 
 #: crates/cyanrip-gui/src/ui.rs:1864
 msgid "轨完成"
-msgstr ""
+msgstr "done"
 
 #: crates/cyanrip-gui/src/ui.rs:1889
 msgid "抓轨完成"
-msgstr ""
+msgstr "Ripping finished"
 
 #: crates/cyanrip-gui/src/ui.rs:1894 crates/cyanrip-gui/src/ui.rs:1987
 msgid "轨精确命中"
-msgstr ""
+msgstr "tracks accurately ripped"
 
 #: crates/cyanrip-gui/src/ui.rs:1902
 msgid "另一个实例仍在运行，已跳过关机"
-msgstr ""
+msgstr "Another instance is still running; shutdown skipped"
 
 #: crates/cyanrip-gui/src/ui.rs:1920
 msgid "抓轨失败"
-msgstr ""
+msgstr "Ripping failed"
 
 #: crates/cyanrip-gui/src/ui.rs:1923
 msgid "关闭"
-msgstr ""
+msgstr "Close"
 
 #: crates/cyanrip-gui/src/ui.rs:1924
 msgid "重试"
-msgstr ""
+msgstr "Retry"
 
 #: crates/cyanrip-gui/src/ui.rs:1948
 msgid "已取消，完成"
-msgstr ""
+msgstr "Cancelled, completed"
+
+#: crates/cyanrip-gui/src/ui.rs:1950 crates/cyanrip-gui/src/ui.rs:2033
+#: crates/cyanrip-gui/src/ui.rs:2100 crates/cyanrip-gui/src/ui.rs:2208
+msgid "轨"
+msgstr "tracks"
 
 #: crates/cyanrip-gui/src/ui.rs:1963
 msgid "正在抓取轨"
-msgstr ""
+msgstr "Ripping track"
 
 #: crates/cyanrip-gui/src/ui.rs:1975
 msgid "全部精确命中，与 AccurateRip 数据库一致"
-msgstr ""
+msgstr "All tracks accurately ripped — matches AccurateRip"
 
 #: crates/cyanrip-gui/src/ui.rs:1977
 msgid "存在抓轨错误"
-msgstr ""
+msgstr "Ripping errors detected"
 
 #: crates/cyanrip-gui/src/ui.rs:1979
 msgid "基本命中，个别轨未入库或校验和不一致"
-msgstr ""
+msgstr "Mostly accurate; a few tracks are unknown or have mismatched checksums"
 
 #: crates/cyanrip-gui/src/ui.rs:1981
 msgid "部分轨未通过 AccurateRip 校验"
-msgstr ""
+msgstr "Some tracks failed AccurateRip verification"
 
 #: crates/cyanrip-gui/src/ui.rs:2043
 msgid "C2 支持"
-msgstr ""
+msgstr "C2 support"
 
 #: crates/cyanrip-gui/src/ui.rs:2045
 msgid "支持（仍以多遍比对为准）"
-msgstr ""
+msgstr "Supported (multi-pass comparison still preferred)"
 
 #: crates/cyanrip-gui/src/ui.rs:2046
 msgid "驱动不支持，依赖多遍比对"
-msgstr ""
+msgstr "Unsupported by drive; relies on multi-pass comparison"
 
 #: crates/cyanrip-gui/src/ui.rs:2055
 msgid "AccurateRip"
-msgstr ""
+msgstr "AccurateRip"
 
 #: crates/cyanrip-gui/src/ui.rs:2060
 msgid "数据库中有这张碟"
-msgstr ""
+msgstr "Disc found in database"
 
 #: crates/cyanrip-gui/src/ui.rs:2062
 msgid "数据库未命中"
-msgstr ""
+msgstr "Not found in database"
 
 #: crates/cyanrip-gui/src/ui.rs:2065
 msgid "未查询"
-msgstr ""
+msgstr "Not checked"
 
 #: crates/cyanrip-gui/src/ui.rs:2069 crates/cyanrip-gui/src/ui.rs:2133
 msgid "精确命中"
-msgstr ""
+msgstr "Accurately ripped"
 
 #: crates/cyanrip-gui/src/ui.rs:2072
 msgid "抓轨错误"
-msgstr ""
+msgstr "Ripping errors"
 
 #: crates/cyanrip-gui/src/ui.rs:2074
 msgid "音频总时长"
-msgstr ""
+msgstr "Total audio length"
 
 #: crates/cyanrip-gui/src/ui.rs:2077
 msgid "MusicBrainz DiscID"
-msgstr ""
+msgstr "MusicBrainz DiscID"
 
 #: crates/cyanrip-gui/src/ui.rs:2080
 msgid "碟片 MCN"
-msgstr ""
+msgstr "Disc MCN"
 
 #: crates/cyanrip-gui/src/ui.rs:2083
 msgid "日志文件"
-msgstr ""
+msgstr "Log file"
 
 #: crates/cyanrip-gui/src/ui.rs:2090
 msgid "曲目明细"
-msgstr ""
+msgstr "Track details"
 
 #: crates/cyanrip-gui/src/ui.rs:2101
 msgid "时长"
-msgstr ""
+msgstr "Length"
 
 #: crates/cyanrip-gui/src/ui.rs:2102
 msgid "EAC CRC32"
-msgstr ""
+msgstr "EAC CRC32"
 
 #: crates/cyanrip-gui/src/ui.rs:2103
 msgid "AR v1"
-msgstr ""
+msgstr "AR v1"
 
 #: crates/cyanrip-gui/src/ui.rs:2104
 msgid "AR v2"
-msgstr ""
+msgstr "AR v2"
 
 #: crates/cyanrip-gui/src/ui.rs:2105
 msgid "conf"
-msgstr ""
+msgstr "conf"
 
 #: crates/cyanrip-gui/src/ui.rs:2106
 msgid "状态"
-msgstr ""
+msgstr "Status"
 
 #: crates/cyanrip-gui/src/ui.rs:2134
 msgid "未入库"
-msgstr ""
+msgstr "Not in DB"
 
 #: crates/cyanrip-gui/src/ui.rs:2135
 msgid "不一致"
-msgstr ""
+msgstr "Mismatch"
 
 #: crates/cyanrip-gui/src/ui.rs:2136
 msgid "无数据"
-msgstr ""
+msgstr "No data"
 
 #: crates/cyanrip-gui/src/ui.rs:2179
 msgid "导入失败"
@@ -498,7 +501,7 @@ msgstr "Imported"
 
 #: crates/cyanrip-gui/src/ui.rs:2225
 msgid "请先识别碟片或导入 CUE"
-msgstr ""
+msgstr "Identify the disc or import a CUE first"
 
 #: crates/cyanrip-gui/src/ui.rs:2359
 msgid "未识别 · 没有碟片"
@@ -506,7 +509,7 @@ msgstr "Unidentified · no disc"
 
 #: crates/cyanrip-gui/src/ui.rs:2361
 msgid "等待碟片"
-msgstr ""
+msgstr "Waiting for a disc"
 
 #: crates/cyanrip-gui/src/ui.rs:2369
 msgid "没有碟片"
@@ -526,19 +529,19 @@ msgstr "Fetching cover…"
 
 #: crates/cyanrip-gui/src/ui.rs:2560 crates/cyanrip-gui/src/ui.rs:2561
 msgid "识别中…"
-msgstr ""
+msgstr "Identifying…"
 
 #: crates/cyanrip-gui/src/ui.rs:2603
 msgid "请先识别元数据"
-msgstr ""
+msgstr "Identify metadata first"
 
 #: crates/cyanrip-gui/src/ui.rs:2613
 msgid "找不到这次抓轨的目录"
-msgstr ""
+msgstr "Could not find this rip's directory"
 
 #: crates/cyanrip-gui/src/ui.rs:2620
 msgid "写入标签中…"
-msgstr ""
+msgstr "Writing tags…"
 
 #: crates/cyanrip-gui/src/ui.rs:2678 crates/cyanrip-gui/src/ui.rs:2680
 msgid "封面下载失败"
@@ -566,7 +569,7 @@ msgstr "Export failed"
 
 #: crates/cyanrip-gui/src/ui.rs:2772
 msgid "未识别 · 没有匹配（可导入 CUE 或换 Discogs token）"
-msgstr ""
+msgstr "Unidentified · no match (import a CUE or change the Discogs token)"
 
 #: crates/cyanrip-gui/src/ui.rs:2775
 msgid "没有找到匹配的发行版（可导入 CUE 或换 token）"
@@ -578,7 +581,7 @@ msgstr "Candidates: "
 
 #: crates/cyanrip-gui/src/ui.rs:2825
 msgid "已归档到"
-msgstr ""
+msgstr "Archived to"
 
 #: crates/cyanrip-gui/src/ui.rs:2826
 msgid "标签写入完成"
@@ -586,7 +589,7 @@ msgstr "Tags written"
 
 #: crates/cyanrip-gui/src/ui.rs:2830
 msgid "写入失败："
-msgstr ""
+msgstr "Write failed:"
 
 #~ msgid "设备与驱动"
 #~ msgstr "Device & drive"

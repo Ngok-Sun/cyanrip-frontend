@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-08 00:23+0900\n"
+"POT-Creation-Date: 2026-11-08 00:32+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -339,10 +339,8 @@ msgstr ""
 msgid "检测到新碟片，已刷新曲目"
 msgstr ""
 
-#: crates/cyanrip-gui/src/ui.rs:1821 crates/cyanrip-gui/src/ui.rs:1950
-#: crates/cyanrip-gui/src/ui.rs:2033 crates/cyanrip-gui/src/ui.rs:2100
-#: crates/cyanrip-gui/src/ui.rs:2208
-msgid "轨"
+#: crates/cyanrip-gui/src/ui.rs:1821
+msgid "曲目"
 msgstr ""
 
 #: crates/cyanrip-gui/src/ui.rs:1826
@@ -383,6 +381,11 @@ msgstr ""
 
 #: crates/cyanrip-gui/src/ui.rs:1948
 msgid "已取消，完成"
+msgstr ""
+
+#: crates/cyanrip-gui/src/ui.rs:1950 crates/cyanrip-gui/src/ui.rs:2033
+#: crates/cyanrip-gui/src/ui.rs:2100 crates/cyanrip-gui/src/ui.rs:2208
+msgid "轨"
 msgstr ""
 
 #: crates/cyanrip-gui/src/ui.rs:1963

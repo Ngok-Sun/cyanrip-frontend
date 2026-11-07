@@ -1818,7 +1818,7 @@ fn handle_event(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>, ev: Event) {
                 st.progress = Some(p.clone());
             }
             ui.progress_title
-                .set_text(&format!("{} {}", tr("轨"), p.track));
+                .set_text(&format!("{} {}", tr("曲目"), p.track));
             ui.bar_track.set_fraction(p.track_pct as f64 / 100.0);
             ui.bar_track.set_text(Some(&format!("{:.1}%", p.track_pct)));
             ui.bar_total.set_fraction(p.overall_pct as f64 / 100.0);
