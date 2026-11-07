@@ -73,10 +73,13 @@ pub struct Ui {
     pub retries_spin: gtk::SpinButton,
     pub verify_spin: gtk::SpinButton,
     pub formats_combo: adw::ComboRow,
-    pub root_entry: adw::EntryRow,
+    pub root_row: adw::ActionRow,
+    pub root_pick_btn: gtk::Button,
     pub bin_entry: adw::EntryRow,
     pub sound_switch: adw::SwitchRow,
-    pub theme_entry: adw::EntryRow,
+    pub theme_combo: adw::ComboRow,
+    pub theme_test_btn: gtk::Button,
+    pub sound_events: RefCell<Vec<String>>,
     pub eject_switch: adw::SwitchRow,
     pub notify_switch: adw::SwitchRow,
     pub shutdown_switch: adw::SwitchRow,
@@ -283,10 +286,13 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
         retries: retries_spin,
         verify: verify_spin,
         formats: formats_combo,
-        root: root_entry,
+        root: root_row,
+        root_pick: root_pick_btn,
         bin: bin_entry,
         sound: sound_switch,
-        theme: theme_entry,
+        theme: theme_combo,
+        theme_test: theme_test_btn,
+        sound_events,
         eject: eject_switch,
         notify: notify_switch,
         shutdown: shutdown_switch,
@@ -348,10 +354,13 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
         retries_spin,
         verify_spin,
         formats_combo,
-        root_entry,
+        root_row,
+        root_pick_btn,
         bin_entry,
         sound_switch,
-        theme_entry,
+        theme_combo,
+        theme_test_btn,
+        sound_events: RefCell::new(sound_events),
         eject_switch,
         notify_switch,
         shutdown_switch,
@@ -375,10 +384,13 @@ struct SettingsWidgets {
     retries: gtk::SpinButton,
     verify: gtk::SpinButton,
     formats: adw::ComboRow,
-    root: adw::EntryRow,
+    root: adw::ActionRow,
+    root_pick: gtk::Button,
     bin: adw::EntryRow,
     sound: adw::SwitchRow,
-    theme: adw::EntryRow,
+    theme: adw::ComboRow,
+    theme_test: gtk::Button,
+    sound_events: Vec<String>,
     eject: adw::SwitchRow,
     notify: adw::SwitchRow,
     shutdown: adw::SwitchRow,
@@ -444,11 +456,17 @@ fn build_settings_page(state: &Rc<RefCell<AppState>>) -> SettingsWidgets {
 
     // 输出
     let output_group = adw::PreferencesGroup::builder().title(tr("输出")).build();
-    let root_entry = adw::EntryRow::builder()
+    // 目录只能用选择器改，避免手打路径出错
+    let root_row = adw::ActionRow::builder()
         .title(tr("输出根目录"))
-        .text(s.output.root.display().to_string())
+        .subtitle(s.output.root.display().to_string())
         .build();
-    output_group.add(&root_entry);
+    root_row.set_activatable(false);
+    root_row.add_css_class("property");
+    let root_pick = gtk::Button::with_label(&tr("选择…"));
+    root_pick.set_valign(gtk::Align::Center);
+    root_row.add_suffix(&root_pick);
+    output_group.add(&root_row);
 
     // 元数据（M3 才真正使用）
     let meta_group = adw::PreferencesGroup::builder()
@@ -462,10 +480,21 @@ fn build_settings_page(state: &Rc<RefCell<AppState>>) -> SettingsWidgets {
         .title(tr("抓完播放提示音"))
         .active(s.behavior.sound)
         .build();
-    let theme_entry = adw::EntryRow::builder()
-        .title(tr("提示音名称"))
-        .text(s.behavior.sound_theme.clone())
+    // 事件名来自 freedesktop 声音主题里实际存在的文件，避免写错名字没声音
+    let sound_events = list_sound_events();
+    let sound_labels: Vec<&str> = sound_events.iter().map(String::as_str).collect();
+    let theme_index = sound_events
+        .iter()
+        .position(|e| e == &s.behavior.sound_theme)
+        .unwrap_or(0);
+    let theme_combo = adw::ComboRow::builder()
+        .title(tr("提示音"))
+        .model(&gtk::StringList::new(&sound_labels))
+        .selected(theme_index as u32)
         .build();
+    let theme_test = gtk::Button::with_label(&tr("试听"));
+    theme_test.set_valign(gtk::Align::Center);
+    theme_combo.add_suffix(&theme_test);
     let eject_switch = adw::SwitchRow::builder()
         .title(tr("抓完弹出托盘"))
         .active(s.behavior.eject_when_done)
@@ -480,7 +509,7 @@ fn build_settings_page(state: &Rc<RefCell<AppState>>) -> SettingsWidgets {
         .active(s.behavior.shutdown_when_done)
         .build();
     behavior_group.add(&sound_switch);
-    behavior_group.add(&theme_entry);
+    behavior_group.add(&theme_combo);
     behavior_group.add(&eject_switch);
     behavior_group.add(&notify_switch);
     behavior_group.add(&shutdown_switch);
@@ -547,10 +576,13 @@ fn build_settings_page(state: &Rc<RefCell<AppState>>) -> SettingsWidgets {
         retries: retries_spin,
         verify: verify_spin,
         formats: formats_combo,
-        root: root_entry,
+        root: root_row,
+        root_pick,
         bin: bin_entry,
         sound: sound_switch,
-        theme: theme_entry,
+        theme: theme_combo,
+        theme_test,
+        sound_events,
         eject: eject_switch,
         notify: notify_switch,
         shutdown: shutdown_switch,
@@ -754,9 +786,20 @@ fn connect_signals(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
     {
         let st = state.clone();
         let ui2 = ui.clone();
-        ui.root_entry.connect_changed(move |e| {
-            st.borrow_mut().settings.output.root = PathBuf::from(e.text().as_str());
-            mark_dirty(&ui2, &st);
+        ui.root_pick_btn.connect_clicked(move |_| {
+            let dialog = gtk::FileDialog::builder()
+                .title(tr("选择输出根目录"))
+                .modal(true)
+                .build();
+            let ui3 = ui2.clone();
+            let st3 = st.clone();
+            dialog.select_folder(Some(&ui2.window), gtk::gio::Cancellable::NONE, move |res| {
+                let Ok(folder) = res else { return };
+                let Some(path) = folder.path() else { return };
+                ui3.root_row.set_subtitle(&path.display().to_string());
+                st3.borrow_mut().settings.output.root = path;
+                mark_dirty(&ui3, &st3);
+            });
         });
     }
     {
@@ -778,9 +821,26 @@ fn connect_signals(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
     {
         let st = state.clone();
         let ui2 = ui.clone();
-        ui.theme_entry.connect_changed(move |e| {
-            st.borrow_mut().settings.behavior.sound_theme = e.text().to_string();
-            mark_dirty(&ui2, &st);
+        ui.theme_combo.connect_selected_notify(move |row| {
+            let idx = row.selected() as usize;
+            let ev = ui2.sound_events.borrow().get(idx).cloned();
+            if let Some(ev) = ev {
+                st.borrow_mut().settings.behavior.sound_theme = ev;
+                mark_dirty(&ui2, &st);
+            }
+        });
+    }
+    {
+        let ui2 = ui.clone();
+        ui.theme_test_btn.connect_clicked(move |_| {
+            let idx = ui2.theme_combo.selected() as usize;
+            let ev = ui2.sound_events.borrow().get(idx).cloned();
+            if let Some(ev) = ev {
+                let _ = std::process::Command::new("canberra-gtk-play")
+                    .arg("-i")
+                    .arg(ev)
+                    .spawn();
+            }
         });
     }
     {
@@ -860,10 +920,17 @@ fn refresh_settings_widgets(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
             _ => 0,
         },
     );
-    ui.root_entry.set_text(&s.output.root.display().to_string());
+    ui.root_row
+        .set_subtitle(&s.output.root.display().to_string());
     ui.bin_entry.set_text(&s.advanced.bin);
     ui.sound_switch.set_active(s.behavior.sound);
-    ui.theme_entry.set_text(&s.behavior.sound_theme);
+    let theme_idx = ui
+        .sound_events
+        .borrow()
+        .iter()
+        .position(|e| e == &s.behavior.sound_theme)
+        .unwrap_or(0) as u32;
+    ui.theme_combo.set_selected(theme_idx);
     ui.eject_switch.set_active(s.behavior.eject_when_done);
     ui.notify_switch.set_active(s.behavior.notify);
     ui.shutdown_switch.set_active(s.behavior.shutdown_when_done);
@@ -1913,6 +1980,39 @@ fn start_meta_pump(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
         }
         glib::ControlFlow::Continue
     });
+}
+
+/// freedesktop 声音主题里实际存在的事件名（用于下拉选择）
+fn list_sound_events() -> Vec<String> {
+    let mut events: Vec<String> = std::fs::read_dir("/usr/share/sounds/freedesktop/stereo")
+        .map(|rd| {
+            rd.filter_map(|e| e.ok())
+                .filter_map(|e| {
+                    let p = e.path();
+                    if p.extension().and_then(|x| x.to_str()) != Some("oga") {
+                        return None;
+                    }
+                    p.file_stem().map(|s| s.to_string_lossy().to_string())
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    events.sort();
+    // 常用的事件放前面，"complete" 作为默认值置顶
+    if let Some(i) = events.iter().position(|e| e == "complete") {
+        let c = events.remove(i);
+        events.insert(0, c);
+    }
+    for extra in ["bell", "message-new-instant", "dialog-information"] {
+        if let Some(i) = events.iter().position(|e| e == extra) {
+            let v = events.remove(i);
+            events.insert(1.min(events.len()), v);
+        }
+    }
+    if events.is_empty() {
+        events.push("complete".into());
+    }
+    events
 }
 
 fn play_done_sound(settings: &Settings) {

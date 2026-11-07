@@ -41,6 +41,8 @@ pub struct AppState {
     pub track_titles: Vec<Option<String>>,
     /// 识别请求还在路上
     pub meta_pending: bool,
+    /// 输出根目录被 `CYANRIP_GUI_ROOT` 临时覆盖（自测用）：不要写回配置
+    pub ephemeral_root: bool,
 }
 
 impl AppState {
@@ -48,9 +50,11 @@ impl AppState {
         let config_path = Settings::default_path();
         let mut settings = Settings::load(&config_path).unwrap_or_default();
         // 自测用：临时把输出根目录指到别处，避免污染真实音乐库
+        let mut ephemeral_root = false;
         if let Ok(root) = std::env::var("CYANRIP_GUI_ROOT") {
             if !root.trim().is_empty() {
                 settings.output.root = PathBuf::from(root);
+                ephemeral_root = true;
             }
         }
         let device = settings.device.path.display().to_string();
@@ -71,10 +75,15 @@ impl AppState {
             meta_selected: 0,
             track_titles: Vec::new(),
             meta_pending: false,
+            ephemeral_root,
         }
     }
 
     pub fn save_settings(&self) {
+        // 根目录是测试覆盖的：整份配置都别写，免得把临时路径带进真实设置
+        if self.ephemeral_root {
+            return;
+        }
         if let Err(e) = self.settings.save(&self.config_path) {
             eprintln!("保存配置失败：{e:#}");
         }

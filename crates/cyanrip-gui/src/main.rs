@@ -141,6 +141,25 @@ fn main() -> glib::ExitCode {
                 let after = st2.borrow().disc.as_ref().map(|d| d.leadout_lsn);
                 let devs_after = ui2.device_paths.borrow().len();
                 let refresh_ok = before == after && devs_before == devs_after;
+                // 设置页：提示音下拉 + 输出目录行
+                let theme_events = ui2.sound_events.borrow().len();
+                let theme_before = st2.borrow().settings.behavior.sound_theme.clone();
+                let pick_idx = if theme_events > 2 { 2u32 } else { 0 };
+                ui2.theme_combo.set_selected(pick_idx);
+                let theme_after = st2.borrow().settings.behavior.sound_theme.clone();
+                let expect = ui2
+                    .sound_events
+                    .borrow()
+                    .get(pick_idx as usize)
+                    .cloned()
+                    .unwrap_or_default();
+                let combo_ok = theme_after == expect && theme_after != theme_before;
+                // 还原
+                if let Some(i) = ui2.sound_events.borrow().iter().position(|e| e == &theme_before) {
+                    ui2.theme_combo.set_selected(i as u32);
+                }
+                let root_subtitle = ui2.root_row.subtitle().unwrap_or_default().to_string();
+
                 let eject_classes: Vec<String> = ui2
                     .eject_btn
                     .css_classes()
@@ -158,7 +177,7 @@ fn main() -> glib::ExitCode {
                     .unwrap_or(false);
 
                 println!(
-                    "SELFTEST initial_disabled={initial_disabled} dirty={dirty} saved={saved} clean_after_save={clean} all_off={all_off} all_on={all_on} devices={devices} selected={sel_dev} refresh_ok={refresh_ok} eject_icon={icon_ok} eject_classes={eject_classes:?} refresh_classes={refresh_classes:?} disc_after={after:?}"
+                    "SELFTEST initial_disabled={initial_disabled} dirty={dirty} saved={saved} clean_after_save={clean} all_off={all_off} all_on={all_on} devices={devices} selected={sel_dev} refresh_ok={refresh_ok} eject_icon={icon_ok} eject_classes={eject_classes:?} refresh_classes={refresh_classes:?} theme_events={theme_events} theme_combo_ok={combo_ok} root_subtitle={root_subtitle:?} disc_after={after:?}"
                 );
                 app2.quit();
                 glib::ControlFlow::Break
