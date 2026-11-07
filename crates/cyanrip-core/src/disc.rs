@@ -194,6 +194,32 @@ pub fn drive_attrs(device: &Path) -> (String, String, Option<String>) {
     )
 }
 
+/// 光驱/介质状态。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MediaStatus {
+    /// 有碟且可读
+    Ok,
+    NoDisc,
+    TrayOpen,
+    NotReady,
+    Unknown,
+}
+
+/// 查询当前介质状态（GUI 用来轮询换碟）。
+pub fn media_status(device: &Path) -> MediaStatus {
+    let Ok(dev) = open_device(device) else {
+        return MediaStatus::Unknown;
+    };
+    let status = unsafe { libc::ioctl(dev.fd, CDROM_DRIVE_STATUS, 0) } as i32;
+    match status {
+        CDS_NO_DISC => MediaStatus::NoDisc,
+        CDS_TRAY_OPEN => MediaStatus::TrayOpen,
+        CDS_DRIVE_NOT_READY => MediaStatus::NotReady,
+        s if s < 0 => MediaStatus::Unknown,
+        _ => MediaStatus::Ok,
+    }
+}
+
 /// 弹出托盘。
 ///
 /// 这台机器的光驱经 SiI3811 桥接，`CDROMEJECT` ioctl 会被驱动/桥接层以

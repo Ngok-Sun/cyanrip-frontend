@@ -31,6 +31,7 @@ pub struct Ui {
     pub probe_btn: gtk::Button,
     pub eject_btn: gtk::Button,
     pub syncing_device: RefCell<bool>,
+    pub last_media: RefCell<cyanrip_core::disc::MediaStatus>,
     pub detect_btn: gtk::Button,
     pub offset_spin: gtk::SpinButton,
     pub disc_summary: gtk::Label,
@@ -264,6 +265,7 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
         probe_btn,
         eject_btn,
         syncing_device: RefCell::new(false),
+        last_media: RefCell::new(cyanrip_core::disc::MediaStatus::Unknown),
         detect_btn,
         offset_spin,
         disc_summary,
@@ -301,6 +303,7 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
 
     connect_signals(&ui, &state);
     start_event_pump(&ui, &state);
+    start_media_watch(&ui, &state);
     window.present();
     ui
 }
@@ -1117,6 +1120,79 @@ fn spawn_worker(
             let _ = fwd.await;
         });
     });
+}
+
+/// 每 1.5 秒检查一次介质状态：换碟后自动重新探测。
+fn start_media_watch(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
+    let ui2 = ui.clone();
+    let st = state.clone();
+    glib::timeout_add_local(Duration::from_millis(1500), move || {
+        // 抓轨期间不打扰
+        if st.borrow().phase == Phase::Ripping {
+            return glib::ControlFlow::Continue;
+        }
+        let device = selected_device(&ui2);
+        let status = disc::media_status(Path::new(&device));
+        let prev = *ui2.last_media.borrow();
+        if status != prev {
+            if std::env::var("CYANRIP_GUI_DEBUG").as_deref() == Ok("1") {
+                eprintln!("MEDIA {prev:?} -> {status:?}");
+            }
+            *ui2.last_media.borrow_mut() = status;
+            match status {
+                cyanrip_core::disc::MediaStatus::Ok => {
+                    // 新碟就位：静默重新探测并刷新列表
+                    let refreshed = auto_probe_disc(&ui2, &st);
+                    if std::env::var("CYANRIP_GUI_DEBUG").as_deref() == Ok("1") {
+                        eprintln!(
+                            "MEDIA auto_probe={refreshed} tracks={}",
+                            st.borrow()
+                                .disc
+                                .as_ref()
+                                .map(|d| d.audio_track_count())
+                                .unwrap_or(0)
+                        );
+                    }
+                    if refreshed {
+                        ui2.toast
+                            .add_toast(adw::Toast::new(&tr("检测到新碟片，已刷新曲目")));
+                    }
+                }
+                _ => {
+                    let mut s = st.borrow_mut();
+                    if s.disc.is_some() {
+                        s.disc = None;
+                        s.selected.clear();
+                        drop(s);
+                        refresh_disc(&ui2, &st);
+                        ui2.start_btn.set_sensitive(false);
+                    }
+                }
+            }
+        }
+        glib::ControlFlow::Continue
+    });
+}
+
+/// 静默探测（不弹错误提示），成功返回 true。
+fn auto_probe_disc(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) -> bool {
+    let device = selected_device(ui);
+    let Ok(info) = disc::probe(Path::new(&device)) else {
+        return false;
+    };
+    let offset = {
+        let mut st = state.borrow_mut();
+        st.device = device;
+        st.selected = vec![true; info.audio_track_count()];
+        let off = st.settings.offset_for(&info.model).unwrap_or(0);
+        st.disc = Some(info);
+        off
+    };
+    ui.offset_spin.set_value(offset as f64);
+    refresh_disc(ui, state);
+    sync_select_all(ui, state);
+    ui.start_btn.set_sensitive(true);
+    true
 }
 
 fn start_event_pump(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
