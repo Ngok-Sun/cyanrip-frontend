@@ -30,6 +30,8 @@ pub struct AppState {
     pub events: Option<mpsc::Receiver<Event>>,
     pub cancel: Option<watch::Sender<bool>>,
     pub log_text: String,
+    /// 设置页有未保存的改动
+    pub dirty: bool,
 }
 
 impl AppState {
@@ -49,6 +51,7 @@ impl AppState {
             events: None,
             cancel: None,
             log_text: String::new(),
+            dirty: false,
         }
     }
 

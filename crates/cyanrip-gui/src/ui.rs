@@ -55,6 +55,9 @@ pub struct Ui {
     pub eject_switch: adw::SwitchRow,
     pub notify_switch: adw::SwitchRow,
     pub shutdown_switch: adw::SwitchRow,
+    pub save_btn: gtk::Button,
+    pub reset_btn: gtk::Button,
+    pub settings_status: adw::ActionRow,
     pub log_lines_rendered: RefCell<usize>,
 }
 
@@ -193,20 +196,23 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
     result_page.append(&result_actions);
 
     // ---------- 设置页 ----------
-    let (
-        settings_page,
-        paranoia_spin,
-        retries_spin,
-        verify_spin,
-        formats_combo,
-        root_entry,
-        bin_entry,
-        sound_switch,
-        theme_entry,
-        eject_switch,
-        notify_switch,
-        shutdown_switch,
-    ) = build_settings_page(&state);
+    let SettingsWidgets {
+        page: settings_page,
+        paranoia: paranoia_spin,
+        retries: retries_spin,
+        verify: verify_spin,
+        formats: formats_combo,
+        root: root_entry,
+        bin: bin_entry,
+        sound: sound_switch,
+        theme: theme_entry,
+        eject: eject_switch,
+        notify: notify_switch,
+        shutdown: shutdown_switch,
+        save_btn,
+        reset_btn,
+        status: settings_status,
+    } = build_settings_page(&state);
 
     stack.add_titled(&disc_page, Some("disc"), &tr("碟片"));
     stack.add_titled(&progress_page, Some("progress"), &tr("进度"));
@@ -253,6 +259,9 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
         eject_switch,
         notify_switch,
         shutdown_switch,
+        save_btn,
+        reset_btn,
+        settings_status,
         log_lines_rendered: RefCell::new(0),
     });
 
@@ -262,20 +271,23 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
     ui
 }
 
-type SettingsWidgets = (
-    adw::PreferencesPage,
-    gtk::SpinButton,
-    gtk::SpinButton,
-    gtk::SpinButton,
-    adw::ComboRow,
-    adw::EntryRow,
-    adw::EntryRow,
-    adw::SwitchRow,
-    adw::EntryRow,
-    adw::SwitchRow,
-    adw::SwitchRow,
-    adw::SwitchRow,
-);
+struct SettingsWidgets {
+    page: adw::PreferencesPage,
+    paranoia: gtk::SpinButton,
+    retries: gtk::SpinButton,
+    verify: gtk::SpinButton,
+    formats: adw::ComboRow,
+    root: adw::EntryRow,
+    bin: adw::EntryRow,
+    sound: adw::SwitchRow,
+    theme: adw::EntryRow,
+    eject: adw::SwitchRow,
+    notify: adw::SwitchRow,
+    shutdown: adw::SwitchRow,
+    save_btn: gtk::Button,
+    reset_btn: gtk::Button,
+    status: adw::ActionRow,
+}
 
 fn build_settings_page(state: &Rc<RefCell<AppState>>) -> SettingsWidgets {
     let page = adw::PreferencesPage::new();
@@ -383,26 +395,54 @@ fn build_settings_page(state: &Rc<RefCell<AppState>>) -> SettingsWidgets {
         .build();
     advanced_group.add(&bin_entry);
 
+    // 应用：显式保存（用户要求有保存按钮），未保存时状态行会提示
+    let apply_group = adw::PreferencesGroup::builder().title(tr("应用")).build();
+    let save_btn = gtk::Button::with_label(&tr("保存"));
+    save_btn.add_css_class("suggested-action");
+    save_btn.set_valign(gtk::Align::Center);
+    save_btn.set_sensitive(false);
+
+    let status = adw::ActionRow::builder()
+        .title(tr("设置状态"))
+        .subtitle(tr("所有更改已保存"))
+        .build();
+    status.add_suffix(&save_btn);
+
+    let reset_btn = gtk::Button::with_label(&tr("恢复默认"));
+    reset_btn.set_valign(gtk::Align::Center);
+    let reset_row = adw::ActionRow::builder()
+        .title(tr("恢复默认设置"))
+        .subtitle(tr("不会立即写入，仍需点击保存"))
+        .build();
+    reset_row.add_suffix(&reset_btn);
+
+    apply_group.add(&status);
+    apply_group.add(&reset_row);
+
     page.add(&device_group);
     page.add(&output_group);
     page.add(&meta_group);
     page.add(&behavior_group);
     page.add(&advanced_group);
+    page.add(&apply_group);
 
-    (
+    SettingsWidgets {
         page,
-        paranoia_spin,
-        retries_spin,
-        verify_spin,
-        formats_combo,
-        root_entry,
-        bin_entry,
-        sound_switch,
-        theme_entry,
-        eject_switch,
-        notify_switch,
-        shutdown_switch,
-    )
+        paranoia: paranoia_spin,
+        retries: retries_spin,
+        verify: verify_spin,
+        formats: formats_combo,
+        root: root_entry,
+        bin: bin_entry,
+        sound: sound_switch,
+        theme: theme_entry,
+        eject: eject_switch,
+        notify: notify_switch,
+        shutdown: shutdown_switch,
+        save_btn,
+        reset_btn,
+        status,
+    }
 }
 
 fn connect_signals(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
@@ -438,7 +478,9 @@ fn connect_signals(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
                     .offsets
                     .insert(mh.borrow().clone(), spin.value() as i32);
             }
-            s.save_settings();
+            if !s.dirty {
+                s.save_settings();
+            }
             let _ = &ui2;
         });
     }
@@ -478,99 +520,166 @@ fn connect_signals(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
             }
         });
     }
-    // 设置项 → 立即保存
+    // 设置项 → 只改内存状态并标记"未保存"，点保存按钮才写盘
     {
         let st = state.clone();
-        ui.paranoia_spin.connect_value_changed(move |s| {
-            let mut st = st.borrow_mut();
-            st.settings.rip.paranoia = s.value() as u8;
-            st.save_settings();
+        let ui2 = ui.clone();
+        ui.paranoia_spin.connect_value_changed(move |w| {
+            st.borrow_mut().settings.rip.paranoia = w.value() as u8;
+            mark_dirty(&ui2, &st);
         });
     }
     {
         let st = state.clone();
-        ui.retries_spin.connect_value_changed(move |s| {
-            let mut st = st.borrow_mut();
-            st.settings.rip.retries = s.value() as u32;
-            st.save_settings();
+        let ui2 = ui.clone();
+        ui.retries_spin.connect_value_changed(move |w| {
+            st.borrow_mut().settings.rip.retries = w.value() as u32;
+            mark_dirty(&ui2, &st);
         });
     }
     {
         let st = state.clone();
-        ui.verify_spin.connect_value_changed(move |s| {
-            let mut st = st.borrow_mut();
-            st.settings.rip.verify_passes = s.value() as u8;
-            st.save_settings();
+        let ui2 = ui.clone();
+        ui.verify_spin.connect_value_changed(move |w| {
+            st.borrow_mut().settings.rip.verify_passes = w.value() as u8;
+            mark_dirty(&ui2, &st);
         });
     }
     {
         let st = state.clone();
+        let ui2 = ui.clone();
         ui.formats_combo.connect_selected_notify(move |row| {
-            let mut st = st.borrow_mut();
-            st.settings.rip.formats = match row.selected() {
+            st.borrow_mut().settings.rip.formats = match row.selected() {
                 1 => vec!["flac".into(), "wav".into()],
                 2 => vec!["wav".into()],
                 _ => vec!["flac".into()],
             };
-            st.save_settings();
+            mark_dirty(&ui2, &st);
         });
     }
     {
         let st = state.clone();
+        let ui2 = ui.clone();
         ui.root_entry.connect_changed(move |e| {
-            let mut st = st.borrow_mut();
-            st.settings.output.root = PathBuf::from(e.text().as_str());
-            st.save_settings();
+            st.borrow_mut().settings.output.root = PathBuf::from(e.text().as_str());
+            mark_dirty(&ui2, &st);
         });
     }
     {
         let st = state.clone();
+        let ui2 = ui.clone();
         ui.bin_entry.connect_changed(move |e| {
-            let mut st = st.borrow_mut();
-            st.settings.advanced.bin = e.text().to_string();
-            st.save_settings();
+            st.borrow_mut().settings.advanced.bin = e.text().to_string();
+            mark_dirty(&ui2, &st);
         });
     }
     {
         let st = state.clone();
-        ui.sound_switch.connect_active_notify(move |sw| {
-            let mut st = st.borrow_mut();
-            st.settings.behavior.sound = sw.is_active();
-            st.save_settings();
+        let ui2 = ui.clone();
+        ui.sound_switch.connect_active_notify(move |w| {
+            st.borrow_mut().settings.behavior.sound = w.is_active();
+            mark_dirty(&ui2, &st);
         });
     }
     {
         let st = state.clone();
+        let ui2 = ui.clone();
         ui.theme_entry.connect_changed(move |e| {
-            let mut st = st.borrow_mut();
-            st.settings.behavior.sound_theme = e.text().to_string();
-            st.save_settings();
+            st.borrow_mut().settings.behavior.sound_theme = e.text().to_string();
+            mark_dirty(&ui2, &st);
         });
     }
     {
         let st = state.clone();
-        ui.eject_switch.connect_active_notify(move |sw| {
-            let mut st = st.borrow_mut();
-            st.settings.behavior.eject_when_done = sw.is_active();
-            st.save_settings();
+        let ui2 = ui.clone();
+        ui.eject_switch.connect_active_notify(move |w| {
+            st.borrow_mut().settings.behavior.eject_when_done = w.is_active();
+            mark_dirty(&ui2, &st);
         });
     }
     {
         let st = state.clone();
-        ui.notify_switch.connect_active_notify(move |sw| {
-            let mut st = st.borrow_mut();
-            st.settings.behavior.notify = sw.is_active();
-            st.save_settings();
+        let ui2 = ui.clone();
+        ui.notify_switch.connect_active_notify(move |w| {
+            st.borrow_mut().settings.behavior.notify = w.is_active();
+            mark_dirty(&ui2, &st);
         });
     }
     {
         let st = state.clone();
-        ui.shutdown_switch.connect_active_notify(move |sw| {
-            let mut st = st.borrow_mut();
-            st.settings.behavior.shutdown_when_done = sw.is_active();
-            st.save_settings();
+        let ui2 = ui.clone();
+        ui.shutdown_switch.connect_active_notify(move |w| {
+            st.borrow_mut().settings.behavior.shutdown_when_done = w.is_active();
+            mark_dirty(&ui2, &st);
         });
     }
+    // 保存
+    {
+        let st = state.clone();
+        let ui2 = ui.clone();
+        ui.save_btn.connect_clicked(move |_| {
+            {
+                let mut s = st.borrow_mut();
+                s.save_settings();
+                s.dirty = false;
+            }
+            ui2.settings_status.set_subtitle(&tr("所有更改已保存"));
+            ui2.save_btn.set_sensitive(false);
+            ui2.toast.add_toast(adw::Toast::new(&tr("设置已保存")));
+        });
+    }
+    // 恢复默认（只改控件与内存，仍需保存）
+    {
+        let st = state.clone();
+        let ui2 = ui.clone();
+        ui.reset_btn.connect_clicked(move |_| {
+            {
+                let mut s = st.borrow_mut();
+                s.settings = Settings::default();
+            }
+            refresh_settings_widgets(&ui2, &st);
+            mark_dirty(&ui2, &st);
+            ui2.toast
+                .add_toast(adw::Toast::new(&tr("已恢复默认值，记得保存")));
+        });
+    }
+}
+
+/// 把 `state.settings` 的值写回设置页控件。
+fn refresh_settings_widgets(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
+    let s = state.borrow().settings.clone();
+    ui.paranoia_spin.set_value(s.rip.paranoia as f64);
+    ui.retries_spin.set_value(s.rip.retries as f64);
+    ui.verify_spin.set_value(s.rip.verify_passes as f64);
+    ui.formats_combo.set_selected(
+        match s
+            .rip
+            .formats
+            .iter()
+            .map(String::as_str)
+            .collect::<Vec<_>>()
+            .as_slice()
+        {
+            ["flac"] => 0u32,
+            ["flac", "wav"] => 1,
+            ["wav"] => 2,
+            _ => 0,
+        },
+    );
+    ui.root_entry.set_text(&s.output.root.display().to_string());
+    ui.bin_entry.set_text(&s.advanced.bin);
+    ui.sound_switch.set_active(s.behavior.sound);
+    ui.theme_entry.set_text(&s.behavior.sound_theme);
+    ui.eject_switch.set_active(s.behavior.eject_when_done);
+    ui.notify_switch.set_active(s.behavior.notify);
+    ui.shutdown_switch.set_active(s.behavior.shutdown_when_done);
+}
+
+/// 标记有未保存的改动
+fn mark_dirty(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
+    state.borrow_mut().dirty = true;
+    ui.settings_status.set_subtitle(&tr("有未保存的更改"));
+    ui.save_btn.set_sensitive(true);
 }
 
 /// 探测碟片并刷新界面。
@@ -585,6 +694,10 @@ pub fn probe_disc(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
             // 只有已知型号才套用记忆值；未知时保持 0 且**不要**写进配置，
             // 否则会用错误的 0 覆盖掉用户测好的偏移。
             let offset = st.settings.offset_for(&info.model).unwrap_or(0);
+            let dirty = st.dirty;
+            if !dirty {
+                st.save_settings();
+            }
             st.disc = Some(info);
             drop(st);
             ui.offset_spin.set_value(offset as f64);

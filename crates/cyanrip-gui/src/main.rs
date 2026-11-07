@@ -69,6 +69,33 @@ fn main() -> glib::ExitCode {
             });
         }
 
+        // 设置页保存流程自测：验证"改动 → 变脏 → 保存写盘 → 还原"
+        if std::env::var("CYANRIP_GUI_SELFTEST").as_deref() == Ok("1") {
+            let ui2 = ui.clone();
+            let st2 = state.clone();
+            let app2 = app.clone();
+            glib::timeout_add_local(std::time::Duration::from_millis(400), move || {
+                let original = st2.borrow().settings.rip.verify_passes;
+                let initial_disabled = !ui2.save_btn.is_sensitive();
+                ui2.verify_spin.set_value((original + 1) as f64);
+                let dirty = st2.borrow().dirty && ui2.save_btn.is_sensitive();
+                ui2.save_btn.emit_clicked();
+                let expected = format!("verify_passes = {}", original + 1);
+                let saved = std::fs::read_to_string(&st2.borrow().config_path)
+                    .map(|s| s.contains(&expected))
+                    .unwrap_or(false);
+                // 还原并保存
+                ui2.verify_spin.set_value(original as f64);
+                ui2.save_btn.emit_clicked();
+                let clean = !st2.borrow().dirty && !ui2.save_btn.is_sensitive();
+                println!(
+                    "SELFTEST initial_disabled={initial_disabled} dirty={dirty} saved={saved} clean_after_save={clean}"
+                );
+                app2.quit();
+                glib::ControlFlow::Break
+            });
+        }
+
         // 冒烟测试：CYANRIP_GUI_SMOKE=1 时 2 秒后自动退出
         if std::env::var("CYANRIP_GUI_SMOKE").as_deref() == Ok("1") {
             let app = app.clone();
