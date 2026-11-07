@@ -50,7 +50,21 @@ fn main() -> glib::ExitCode {
                     }
                 }
             }
-            ui::start_rip(&ui, &state);
+            // 等识别结束（最多 15 秒）再开抓，好让元数据随命令行一起传给 cyanrip
+            {
+                let ui3 = ui.clone();
+                let st3 = state.clone();
+                let ticks = std::rc::Rc::new(std::cell::Cell::new(0u32));
+                glib::timeout_add_local(std::time::Duration::from_millis(250), move || {
+                    ticks.set(ticks.get() + 1);
+                    let pending = st3.borrow().meta_pending;
+                    if !pending || ticks.get() > 60 {
+                        ui::start_rip(&ui3, &st3);
+                        return glib::ControlFlow::Break;
+                    }
+                    glib::ControlFlow::Continue
+                });
+            }
             let st2 = state.clone();
             let app2 = app.clone();
             let ui2 = ui.clone();

@@ -512,6 +512,13 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
   `META candidates=1 → applied=/tmp/.../Joe Hisaishi/Quartet (Original Soundtrack)`
 - 34 个测试全绿，clippy 0 警告
 
+**抓轨前识别（同日补）**
+- 识别改为在 `probe` 成功后就触发（只要 TOC + MCN，不需要音频），碟片页即有曲名
+- 选中的候选会随 `-a` / `-t` 传给 cyanrip：目录名、文件名、日志里的元数据一次到位，
+  抓完只需归档、补 label/barcode/封面
+- 介质轮询重复探测同一张碟时保留用户的勾选（之前会重置成全选，导致误抓整张）
+- 抓轨前识别未完成时点「开始」，等识别结束再启动（上限 15s），避免丢掉元数据
+
 **已知限制**
 - 多碟装的 DISCNUMBER/DISCTOTAL 目前固定写 `1/1`，需要界面提供碟号选择（M4）
 - 未识别碟（如花儿 CD2）在 MB 无 discid、无 MCN、无 AcoustID key 时无候选，只能手工补

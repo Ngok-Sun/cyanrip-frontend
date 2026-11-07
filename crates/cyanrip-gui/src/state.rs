@@ -2,6 +2,7 @@
 
 use cyanrip_core::config::Settings;
 use cyanrip_core::event::Event;
+use cyanrip_core::meta::MetaRelease;
 use cyanrip_core::model::{DiscInfo, ProgressUpdate, RipReport};
 use std::path::PathBuf;
 use std::sync::mpsc;
@@ -32,6 +33,14 @@ pub struct AppState {
     pub log_text: String,
     /// 设置页有未保存的改动
     pub dirty: bool,
+    /// 识别到的候选发行版（抓轨前就已就绪）
+    pub meta_releases: Vec<MetaRelease>,
+    /// 当前选中的候选
+    pub meta_selected: usize,
+    /// 与音频轨一一对应的标题（来自选中的候选）
+    pub track_titles: Vec<Option<String>>,
+    /// 识别请求还在路上
+    pub meta_pending: bool,
 }
 
 impl AppState {
@@ -58,6 +67,10 @@ impl AppState {
             cancel: None,
             log_text: String::new(),
             dirty: false,
+            meta_releases: Vec::new(),
+            meta_selected: 0,
+            track_titles: Vec::new(),
+            meta_pending: false,
         }
     }
 
@@ -94,6 +107,20 @@ impl AppState {
                     .copied()
                     .unwrap_or(0),
             )
+    }
+
+    /// 选中第 `idx` 个候选，并刷新每轨标题
+    pub fn select_release(&mut self, idx: usize) {
+        self.meta_selected = idx;
+        self.track_titles = self
+            .meta_releases
+            .get(idx)
+            .map(|r| r.tracks.iter().map(|t| Some(t.title.clone())).collect())
+            .unwrap_or_default();
+    }
+
+    pub fn current_release(&self) -> Option<&MetaRelease> {
+        self.meta_releases.get(self.meta_selected)
     }
 
     pub fn append_log(&mut self, line: &str) {

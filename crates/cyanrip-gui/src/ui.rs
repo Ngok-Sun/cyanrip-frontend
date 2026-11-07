@@ -62,10 +62,10 @@ pub struct Ui {
     pub result_body: gtk::Box,
     pub meta_box: gtk::Box,
     pub meta_status: gtk::Label,
+    pub meta_label: gtk::Label,
     pub meta_dropdown: gtk::DropDown,
     pub meta_identify_btn: gtk::Button,
     pub meta_apply_btn: gtk::Button,
-    pub meta_candidates: RefCell<Vec<MetaRelease>>,
     pub meta_rx: RefCell<Option<mpsc::Receiver<MetaOutcome>>>,
     pub last_rip_dir: RefCell<Option<PathBuf>>,
     pub open_output_btn: gtk::Button,
@@ -141,6 +141,22 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
     disc_summary.set_xalign(0.0);
     disc_summary.add_css_class("title-4");
 
+    // 抓轨前识别：候选下拉 + 识别按钮
+    let meta_label = gtk::Label::new(Some(&tr("未识别 · 放入碟片后自动识别")));
+    meta_label.set_xalign(0.0);
+    meta_label.add_css_class("dim-label");
+    meta_label.set_wrap(true);
+    let meta_dropdown = gtk::DropDown::from_strings(&["—"]);
+    meta_dropdown.set_hexpand(true);
+    meta_dropdown.set_visible(false);
+    let meta_identify_btn = gtk::Button::with_label(&tr("重新识别"));
+    let meta_row = gtk::Box::new(Orientation::Horizontal, 8);
+    meta_row.append(&meta_dropdown);
+    meta_row.append(&meta_identify_btn);
+    let disc_meta_box = gtk::Box::new(Orientation::Vertical, 6);
+    disc_meta_box.append(&meta_label);
+    disc_meta_box.append(&meta_row);
+
     let select_all = gtk::CheckButton::with_label(&tr("全选"));
     select_all.set_active(true);
     select_all.set_tooltip_text(Some(&tr("全选 / 取消全选")));
@@ -162,6 +178,7 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
     disc_page.set_margin_end(12);
     disc_page.append(&device_box);
     disc_page.append(&disc_summary);
+    disc_page.append(&disc_meta_box);
     disc_page.append(&select_row);
     disc_page.append(&track_scroll);
 
@@ -229,15 +246,10 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
     let meta_status = gtk::Label::new(Some(&tr("抓轨完成后可识别元数据")));
     meta_status.set_xalign(0.0);
     meta_status.add_css_class("dim-label");
-    let meta_dropdown = gtk::DropDown::from_strings(&["—"]);
-    meta_dropdown.set_hexpand(true);
-    let meta_identify_btn = gtk::Button::with_label(&tr("识别元数据"));
     let meta_apply_btn = gtk::Button::with_label(&tr("写入标签"));
     meta_apply_btn.add_css_class("suggested-action");
     meta_apply_btn.set_sensitive(false);
     let meta_row = gtk::Box::new(Orientation::Horizontal, 8);
-    meta_row.append(&meta_dropdown);
-    meta_row.append(&meta_identify_btn);
     meta_row.append(&meta_apply_btn);
     let meta_box = gtk::Box::new(Orientation::Vertical, 8);
     let meta_title = gtk::Label::new(Some(&tr("元数据")));
@@ -324,10 +336,10 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
         result_body,
         meta_box,
         meta_status,
+        meta_label,
         meta_dropdown,
         meta_identify_btn,
         meta_apply_btn,
-        meta_candidates: RefCell::new(Vec::new()),
         meta_rx: RefCell::new(None),
         last_rip_dir: RefCell::new(None),
         open_output_btn,
@@ -660,6 +672,21 @@ fn connect_signals(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
         ui.meta_apply_btn
             .connect_clicked(move |_| apply_meta(&ui2, &st));
     }
+    {
+        let ui2 = ui.clone();
+        let st = state.clone();
+        ui.meta_dropdown.connect_selected_notify(move |dd| {
+            let idx = dd.selected() as usize;
+            {
+                let mut s = st.borrow_mut();
+                if idx >= s.meta_releases.len() {
+                    return;
+                }
+                s.select_release(idx);
+            }
+            refresh_disc(&ui2, &st);
+        });
+    }
     // 结果页动作
     {
         let st = state.clone();
@@ -849,7 +876,19 @@ pub fn probe_disc(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
         Ok(info) => {
             let mut st = state.borrow_mut();
             st.device = device;
-            st.selected = vec![true; info.audio_track_count()];
+            // 同一张碟重复探测（例如介质轮询）时保留用户的勾选，
+            // 只有换碟才重置成全选。
+            let same_disc = st
+                .disc
+                .as_ref()
+                .map(|old| {
+                    old.leadout_lsn == info.leadout_lsn
+                        && old.audio_track_count() == info.audio_track_count()
+                })
+                .unwrap_or(false);
+            if !same_disc || st.selected.len() != info.audio_track_count() {
+                st.selected = vec![true; info.audio_track_count()];
+            }
             st.settings.device.path = PathBuf::from(&st.device);
             // 只有已知型号才套用记忆值；未知时保持 0 且**不要**写进配置，
             // 否则会用错误的 0 覆盖掉用户测好的偏移。
@@ -864,6 +903,8 @@ pub fn probe_disc(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
             refresh_disc(ui, state);
             sync_select_all(ui, state);
             ui.start_btn.set_sensitive(true);
+            // 抓轨前识别：元数据只需 TOC + MCN，不依赖音频
+            start_meta_resolve(ui, state);
         }
         Err(e) => {
             state.borrow_mut().disc = None;
@@ -1040,7 +1081,8 @@ pub fn refresh_disc(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
         fmt_duration(info.total_duration())
     ));
     for (i, t) in info.audio_tracks().enumerate() {
-        let title = match &t.title {
+        let custom = st.track_titles.get(i).cloned().flatten();
+        let title = match custom.or_else(|| t.title.clone()) {
             Some(x) => format!("{:02}  {}", t.number, x),
             None => format!("{:02}  {}", t.number, tr("未命名")),
         };
@@ -1084,7 +1126,18 @@ pub fn start_rip(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
         ui.toast.add_toast(adw::Toast::new(&tr("没有选中任何曲目")));
         return;
     }
-    let args = build_cyanrip_args(&st.settings, &info, &selected);
+    let meta = st.current_release().cloned();
+    if std::env::var("CYANRIP_GUI_DEBUG").as_deref() == Ok("1") {
+        eprintln!(
+            "RIP meta={:?} pending={}",
+            meta.as_ref().map(|m| m.title.clone()),
+            st.meta_pending
+        );
+    }
+    let args = build_cyanrip_args(&st.settings, &info, &selected, meta.as_ref());
+    if std::env::var("CYANRIP_GUI_DEBUG").as_deref() == Ok("1") {
+        eprintln!("RIP selected={selected:?} args={args:?}");
+    }
     let offset = st.offset();
     let root = st.settings.output.root.clone();
     let bin = PathBuf::from(&st.settings.advanced.bin);
@@ -1120,7 +1173,12 @@ pub fn start_rip(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
     ui.stack.set_visible_child_name("progress");
 }
 
-fn build_cyanrip_args(settings: &Settings, info: &DiscInfo, selected: &[u32]) -> Vec<String> {
+fn build_cyanrip_args(
+    settings: &Settings,
+    info: &DiscInfo,
+    selected: &[u32],
+    meta: Option<&MetaRelease>,
+) -> Vec<String> {
     let mut args = vec![
         "-Z".to_string(),
         settings.rip.verify_passes.to_string(),
@@ -1134,6 +1192,28 @@ fn build_cyanrip_args(settings: &Settings, info: &DiscInfo, selected: &[u32]) ->
     ];
     if settings.rip.overread {
         args.push("-O".into());
+    }
+    // 抓轨前就已识别的元数据直接交给 cyanrip：文件名、标签、日志一次到位
+    if let Some(rel) = meta {
+        let mut album = format!("artist={}:album={}", rel.artist, rel.title);
+        if let Some(d) = rel.date.as_deref() {
+            album.push_str(&format!(":date={d}"));
+        }
+        if let Some(l) = rel.label.as_deref() {
+            album.push_str(&format!(":label={l}"));
+        }
+        if let Some(c) = rel.catno.as_deref() {
+            album.push_str(&format!(":catalog_number={c}"));
+        }
+        if let Some(b) = rel.barcode.as_deref() {
+            album.push_str(&format!(":barcode={b}"));
+        }
+        args.push("-a".into());
+        args.push(album);
+        for (i, t) in rel.tracks.iter().enumerate() {
+            args.push("-t".into());
+            args.push(format!("{}=title={}", i + 1, t.title));
+        }
     }
     if selected.len() != info.audio_track_count() {
         args.push("-l".into());
@@ -1242,18 +1322,34 @@ fn auto_probe_disc(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) -> bool {
     let Ok(info) = disc::probe(Path::new(&device)) else {
         return false;
     };
-    let offset = {
+    let (offset, changed) = {
         let mut st = state.borrow_mut();
         st.device = device;
-        st.selected = vec![true; info.audio_track_count()];
+        // 同一张碟的重复探测不动用户勾选；换碟才重置并重新识别
+        let same = st
+            .disc
+            .as_ref()
+            .map(|old| {
+                old.leadout_lsn == info.leadout_lsn
+                    && old.audio_track_count() == info.audio_track_count()
+            })
+            .unwrap_or(false);
+        if !same || st.selected.len() != info.audio_track_count() {
+            st.selected = vec![true; info.audio_track_count()];
+            st.meta_releases.clear();
+            st.track_titles.clear();
+        }
         let off = st.settings.offset_for(&info.model).unwrap_or(0);
         st.disc = Some(info);
-        off
+        (off, !same)
     };
     ui.offset_spin.set_value(offset as f64);
     refresh_disc(ui, state);
     sync_select_all(ui, state);
     ui.start_btn.set_sensitive(true);
+    if changed {
+        start_meta_resolve(ui, state);
+    }
     true
 }
 
@@ -1347,8 +1443,8 @@ fn handle_event(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>, ev: Event) {
             let root = settings.output.root.clone();
             let dir = tag::newest_rip_dir(&root);
             *ui.last_rip_dir.borrow_mut() = dir;
-            if settings.behavior.auto_tag_after_rip {
-                start_meta_resolve(ui, state);
+            if settings.behavior.auto_tag_after_rip && state.borrow().current_release().is_some() {
+                apply_meta(ui, state);
             }
             ui.cancel_btn.set_sensitive(false);
             ui.start_btn.set_sensitive(true);
@@ -1632,8 +1728,10 @@ fn start_meta_resolve(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
         return;
     };
     let root = state.borrow().settings.output.root.clone();
+    ui.meta_label.set_text(&tr("识别中…"));
     ui.meta_status.set_text(&tr("识别中…"));
     ui.meta_apply_btn.set_sensitive(false);
+    state.borrow_mut().meta_pending = true;
     let (tx, rx) = mpsc::channel();
     *ui.meta_rx.borrow_mut() = Some(rx);
     std::thread::spawn(move || {
@@ -1669,12 +1767,17 @@ fn start_meta_resolve(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
 
 /// 把选中候选写入标签并归档。
 fn apply_meta(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
-    let idx = ui.meta_dropdown.selected() as usize;
-    let release = ui.meta_candidates.borrow().get(idx).cloned();
+    let release = state.borrow().current_release().cloned();
     let Some(release) = release else {
+        ui.toast.add_toast(adw::Toast::new(&tr("请先识别元数据")));
         return;
     };
-    let Some(dir) = ui.last_rip_dir.borrow().clone() else {
+    let dir = ui
+        .last_rip_dir
+        .borrow()
+        .clone()
+        .or_else(|| tag::newest_rip_dir(&state.borrow().settings.output.root));
+    let Some(dir) = dir else {
         ui.toast
             .add_toast(adw::Toast::new(&tr("找不到这次抓轨的目录")));
         return;
@@ -1709,14 +1812,34 @@ fn start_meta_pump(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
         if let Some(msg) = msg {
             match msg {
                 MetaOutcome::Candidates(list, dir) => {
+                    st.borrow_mut().meta_pending = false;
                     if std::env::var("CYANRIP_GUI_DEBUG").as_deref() == Ok("1") {
-                        eprintln!("META candidates={}", list.len());
+                        eprintln!(
+                            "META candidates={} titles={:?}",
+                            list.len(),
+                            list.first().map(|r| r
+                                .tracks
+                                .iter()
+                                .take(3)
+                                .map(|t| t.title.clone())
+                                .collect::<Vec<_>>())
+                        );
                     }
-                    *ui2.last_rip_dir.borrow_mut() = dir;
+                    if dir.is_some() {
+                        *ui2.last_rip_dir.borrow_mut() = dir;
+                    }
                     if list.is_empty() {
+                        ui2.meta_label
+                            .set_text(&tr("未识别 · 没有匹配（可手工补或试试 AcoustID)"));
+                        ui2.meta_dropdown.set_visible(false);
                         ui2.meta_status
                             .set_text(&tr("没有找到匹配的发行版（可换 Discogs token 或手工补）"));
                         ui2.meta_apply_btn.set_sensitive(false);
+                        let mut s = st.borrow_mut();
+                        s.meta_releases.clear();
+                        s.track_titles.clear();
+                        drop(s);
+                        refresh_disc(&ui2, &st);
                     } else {
                         let labels: Vec<String> = list
                             .iter()
@@ -1734,12 +1857,29 @@ fn start_meta_pump(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
                         let refs: Vec<&str> = labels.iter().map(String::as_str).collect();
                         ui2.meta_dropdown
                             .set_model(Some(&gtk::StringList::new(&refs)));
-                        ui2.meta_dropdown.set_selected(0);
+                        ui2.meta_dropdown.set_visible(true);
+                        let first = &list[0];
+                        ui2.meta_label.set_text(&format!(
+                            "{} — {}（{} · {}）",
+                            first.artist,
+                            first.title,
+                            first.date.clone().unwrap_or_else(|| "年份未知".into()),
+                            first.source.as_str()
+                        ));
                         ui2.meta_status
                             .set_text(&format!("{} {}", tr("找到候选："), list.len()));
-                        ui2.meta_apply_btn.set_sensitive(true);
-                        *ui2.meta_candidates.borrow_mut() = list;
-                        if std::env::var("CYANRIP_GUI_AUTOAPPLY").as_deref() == Ok("1") {
+                        let mut s = st.borrow_mut();
+                        s.meta_releases = list;
+                        s.select_release(0);
+                        let has_dir = ui2.last_rip_dir.borrow().is_some();
+                        drop(s);
+                        ui2.meta_dropdown.set_selected(0);
+                        ui2.meta_apply_btn.set_sensitive(has_dir);
+                        refresh_disc(&ui2, &st);
+                        // 不能在这里写标签：抓轨还没结束时文件是半成品
+                        if std::env::var("CYANRIP_GUI_AUTOAPPLY").as_deref() == Ok("1")
+                            && st.borrow().phase == Phase::Done
+                        {
                             apply_meta(&ui2, &st);
                         }
                     }
