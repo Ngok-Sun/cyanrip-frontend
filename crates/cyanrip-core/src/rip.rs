@@ -101,6 +101,15 @@ impl LineSplitter {
     }
 }
 
+/// 从透传参数里取 `-Z N`（每轨最少读取 N+1 遍），用于折算全碟进度。
+pub fn verify_passes_from_args(args: &[String]) -> u8 {
+    args.iter()
+        .position(|a| a == "-Z")
+        .and_then(|i| args.get(i + 1))
+        .and_then(|v| v.parse::<u8>().ok())
+        .unwrap_or(0)
+}
+
 /// `Track 5 ripped and encoded successfully!` → Some(5)
 pub fn parse_track_done(line: &str) -> Option<u32> {
     let rest = line.strip_prefix("Track ")?;
@@ -168,7 +177,8 @@ pub async fn run(
     }
     drop(line_tx);
 
-    let mut tracker = ProgressTracker::new(disc);
+    let passes = verify_passes_from_args(&opts.extra_args);
+    let mut tracker = ProgressTracker::with_passes(disc, passes);
     let mut captured = String::new();
     let mut last_emit = Instant::now() - PROGRESS_THROTTLE;
     let mut current_track = 0u32;
@@ -291,6 +301,19 @@ mod tests {
         );
         assert_eq!(parse_track_done("Track 1 ripped and encoded"), None);
         assert_eq!(parse_track_done("Ripping track 1"), None);
+    }
+
+    #[test]
+    fn reads_verify_passes_from_args() {
+        let args = vec![
+            "-Z".to_string(),
+            "2".to_string(),
+            "-P".to_string(),
+            "3".to_string(),
+        ];
+        assert_eq!(verify_passes_from_args(&args), 2);
+        assert_eq!(verify_passes_from_args(&[]), 0);
+        assert_eq!(verify_passes_from_args(&["-P".to_string()]), 0);
     }
 
     #[test]

@@ -42,3 +42,12 @@ cargo run -p cyanrip-cli -- rip --device /dev/sr0 --offset 48 -- -Z 2 -P 3 -o fl
 - 三份真实日志 fixture（久石譲 *Quartet* 13/13、花儿乐队 CD1 15/16、CD2 8/8）解析结果与 cyanrip 输出一致
 - 假 cyanrip 脚本驱动的流式事件：进度、TrackStarted、TrackDone、RipFinished
 - 取消路径：`watch` 通道触发后 300ms 内终止子进程并返回 `Cancelled`
+- **真碟**（久石譲 *Quartet*，PIONEER DVR-106D，offset +48）：
+  - `probe` 读出 13 轨 / 41:22 / lead-out 186178，与 cyanrip 日志一致
+  - `rip -l 5 -Z 2` 产出 `EAC CRC32 7FF4B823`、`AR v2 539F7C13 (confidence 8)`，与之前 cyanrip 完整抓轨的结果逐位相同
+  - `-Z 2` 三遍读取时总进度单调递增，倍速读数 1.8–3.4x
+
+## 已知坑
+
+- `CDROMREADTOCHDR` 是 **0x5305**，不是 0x5302（0x5302 是 `CDROMRESUME`）。写错时 ioctl 返回 0、缓冲区一个字节都不写，属于静默失败——本项目踩过一次。
+- 全碟进度依赖 TOC 的轨长；用 `-l` 只抓部分轨时，ETA 仍按整碟估算。

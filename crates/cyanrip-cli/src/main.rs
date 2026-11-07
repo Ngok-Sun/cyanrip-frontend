@@ -14,6 +14,8 @@ use cyanrip_core::rip::{self, RipOptions};
 use std::path::PathBuf;
 
 fn main() {
+    // 管道被下游关闭（如 `| head`）时安静退出，而不是 panic
+    unsafe { libc::signal(libc::SIGPIPE, libc::SIG_DFL) };
     if let Err(e) = real_main() {
         eprintln!("错误: {e:#}");
         std::process::exit(1);

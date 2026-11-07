@@ -514,6 +514,10 @@ language = "zh"               # 本阶段只打包 zh，其余语言留接口
 - 真机验证：
   - `probe` 在空仓时正确返回"光驱中没有碟片"，不 panic
   - `parse-log` 对三份真实日志输出与 cyanrip 原始结果一致（Quartet 13/13、花儿 CD1 15/16、CD2 8/8）
-- 待办：`rip` 子命令的真碟验收（当前光驱内无碟）；GUI crate 随 M2 建立
+- 真碟验收（2026-11-07，久石譲 *Quartet*）：
+  - `probe`：13 轨 / 41:22 / lead-out 186178，与 cyanrip 一致
+  - `rip -l 5 -Z 2`：EAC CRC32 `7FF4B823`、AR v2 `539F7C13`（confidence 8），与 cyanrip 完整抓轨逐位相同
+  - 修复：`CDROMREADTOCHDR` 常量误写为 0x5302（实为 `CDROMRESUME`，返回 0 且不写缓冲区），已改为 0x5305
+- 待办：GUI crate 随 M2 建立
 
 ### M2 — 未开始

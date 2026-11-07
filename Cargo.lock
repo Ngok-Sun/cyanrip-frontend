@@ -114,6 +114,7 @@ dependencies = [
  "anyhow",
  "async-channel",
  "cyanrip-core",
+ "libc",
  "regex",
  "serde_json",
  "tokio",

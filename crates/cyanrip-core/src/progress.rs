@@ -9,7 +9,9 @@
 //! Ripping data track 2, progress - 12.00%, ETA - 45s, errors - 2
 //! ```
 //!
-//! ETA 只有 `h m` / `m` / `s` 三种形态，不带秒的分钟值意味着秒被舍去。
+//! 两个坑：
+//! 1. `-Z N` 会让同一轨被反复读取，百分比会从 100% 跳回 0%——直接映射会让进度条倒退；
+//! 2. cyanrip 的 ETA 是滑动窗口估算，开抓前几秒经常给出 `9:40:00` 这类离谱值。
 
 use crate::model::{DiscInfo, ProgressUpdate, TrackInfo};
 use regex::Regex;
@@ -76,30 +78,62 @@ fn parse_eta(s: &str) -> Option<Duration> {
 
 /// 把单轨进度折算成全碟进度，并估算实际读取倍速。
 pub struct ProgressTracker {
-    /// 参与抓取的音轨（按 TOC 顺序）
     tracks: Vec<TrackInfo>,
     total_frames: u64,
     started: Instant,
+    /// 每轨读取遍数（`-Z N` → N+1 遍）
+    passes: u8,
+    current_track: u32,
+    current_pass: u8,
+    last_pct: f32,
+    last_overall: f32,
+    /// 倍速的滚动采样（抓轨开始后的时长, 已读帧）
+    speed_sample: Option<(Duration, u64)>,
+    speed_x: Option<f32>,
 }
 
 impl ProgressTracker {
     pub fn new(disc: &DiscInfo) -> Self {
+        Self::with_passes(disc, 0)
+    }
+
+    /// `verify_passes` 对应 cyanrip 的 `-Z`：每轨至少读 `verify_passes + 1` 遍。
+    pub fn with_passes(disc: &DiscInfo, verify_passes: u8) -> Self {
         let tracks: Vec<TrackInfo> = disc.audio_tracks().cloned().collect();
         let total_frames = tracks.iter().map(|t| t.duration_frames as u64).sum();
         Self {
             tracks,
             total_frames,
             started: Instant::now(),
+            passes: verify_passes.saturating_add(1),
+            current_track: 0,
+            current_pass: 0,
+            last_pct: 0.0,
+            last_overall: 0.0,
+            speed_sample: None,
+            speed_x: None,
         }
     }
 
-    /// 音轨号 → 在 `tracks` 中的下标
     fn index_of(&self, track_number: u32) -> Option<usize> {
         self.tracks.iter().position(|t| t.number == track_number)
     }
 
     /// 喂一行进度，得到 UI 可直接显示的数据。
     pub fn update(&mut self, line: &ProgressLine) -> ProgressUpdate {
+        if line.track != self.current_track {
+            self.current_track = line.track;
+            self.current_pass = 0;
+            self.last_pct = 0.0;
+        } else if line.percent + 5.0 < self.last_pct && self.last_pct > 20.0 {
+            // 百分比大幅回落 = 开始下一遍校验
+            self.current_pass = self
+                .current_pass
+                .saturating_add(1)
+                .min(self.passes.saturating_sub(1));
+        }
+        self.last_pct = line.percent;
+
         let elapsed = self.started.elapsed();
         let idx = self.index_of(line.track).unwrap_or(0);
         let before: u64 = self.tracks[..idx]
@@ -112,27 +146,51 @@ impl ProgressTracker {
             .map(|t| t.duration_frames as u64)
             .unwrap_or(0);
 
-        let frames_done = before + (cur as f64 * line.percent as f64 / 100.0) as u64;
-        let overall = if self.total_frames > 0 {
+        let frac = ((self.current_pass as f32 + line.percent / 100.0) / self.passes as f32)
+            .clamp(0.0, 1.0);
+        let frames_done = before + (cur as f32 * frac) as u64;
+
+        let raw_overall = if self.total_frames > 0 {
             (frames_done as f64 / self.total_frames as f64 * 100.0) as f32
         } else {
             0.0
         };
+        let overall = raw_overall.max(self.last_overall).clamp(0.0, 100.0);
+        self.last_overall = overall;
+
+        // 倍速：用 ≥1s 的窗口做差分，避免累计值把速度放大（从第 5 轨开始抓时尤其明显）
+        match self.speed_sample {
+            None => self.speed_sample = Some((elapsed, frames_done)),
+            Some((t0, f0)) if elapsed.saturating_sub(t0) >= Duration::from_secs(1) => {
+                let dt = elapsed.saturating_sub(t0).as_secs_f64();
+                if frames_done > f0 && dt > 0.0 {
+                    let inst = (frames_done - f0) as f64 / dt / 75.0;
+                    // 轻度平滑，避免数字乱跳
+                    self.speed_x = Some(match self.speed_x {
+                        Some(prev) => (prev * 0.6 + inst as f32 * 0.4).min(60.0),
+                        None => inst as f32,
+                    });
+                }
+                self.speed_sample = Some((elapsed, frames_done));
+            }
+            _ => {}
+        }
 
         let secs = elapsed.as_secs_f64();
-        // 1x = 75 扇区/秒；用累计值计算，比瞬时值平滑
-        let speed_x = if secs > 0.5 && frames_done > 0 {
-            Some((frames_done as f64 / secs / 75.0) as f32)
+        let eta = if overall > 3.0 && secs > 2.0 {
+            Some(Duration::from_secs_f64(
+                secs * (100.0 - overall as f64) / overall as f64,
+            ))
         } else {
-            None
+            line.eta
         };
 
         ProgressUpdate {
             track: line.track,
             track_pct: line.percent,
             overall_pct: overall,
-            eta: line.eta,
-            speed_x,
+            eta,
+            speed_x: self.speed_x,
             elapsed,
         }
     }
@@ -218,5 +276,56 @@ mod tests {
         });
         // 已完成 1000 + 本轨 1500 = 2500 / 4000 = 62.5%
         assert!((u.overall_pct - 62.5).abs() < 0.01, "got {}", u.overall_pct);
+    }
+
+    #[test]
+    fn overall_never_goes_backwards_on_repeat_pass() {
+        let disc = disc_with(&[(1, 1000), (2, 3000)]);
+        let mut t = ProgressTracker::with_passes(&disc, 2);
+        let hi = t.update(&ProgressLine {
+            track: 1,
+            percent: 99.0,
+            eta: None,
+            errors: 0,
+        });
+        let lo = t.update(&ProgressLine {
+            track: 1,
+            percent: 0.0,
+            eta: None,
+            errors: 0,
+        });
+        assert!(lo.overall_pct >= hi.overall_pct, "总进度不应倒退");
+    }
+
+    #[test]
+    fn repeat_passes_advance_overall_progress() {
+        let disc = disc_with(&[(1, 7500)]);
+        let mut t = ProgressTracker::with_passes(&disc, 2); // 每轨 3 遍
+        let first_pass = t.update(&ProgressLine {
+            track: 1,
+            percent: 50.0,
+            eta: None,
+            errors: 0,
+        });
+        // 第二遍读到 50%
+        let _ = t.update(&ProgressLine {
+            track: 1,
+            percent: 100.0,
+            eta: None,
+            errors: 0,
+        });
+        let second_pass = t.update(&ProgressLine {
+            track: 1,
+            percent: 50.0,
+            eta: None,
+            errors: 0,
+        });
+        // 第一遍 50% ≈ 16.7%，第二遍 50% ≈ 50%
+        assert!(
+            second_pass.overall_pct > first_pass.overall_pct + 20.0,
+            "多遍读取应推进总进度：{} -> {}",
+            first_pass.overall_pct,
+            second_pass.overall_pct
+        );
     }
 }

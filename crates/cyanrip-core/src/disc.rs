@@ -13,7 +13,8 @@ use std::ffi::CString;
 use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 
-const CDROMREADTOCHDR: libc::c_ulong = 0x5302;
+// 注意：0x5302 是 CDROMRESUME，TOCHDR 是 0x5305（linux/cdrom.h）
+const CDROMREADTOCHDR: libc::c_ulong = 0x5305;
 const CDROMREADTOCENTRY: libc::c_ulong = 0x5306;
 const CDROM_DRIVE_STATUS: libc::c_ulong = 0x5326;
 
