@@ -195,7 +195,17 @@ pub fn drive_attrs(device: &Path) -> (String, String, Option<String>) {
 }
 
 /// 弹出托盘。
+///
+/// 这台机器的光驱经 SiI3811 桥接，`CDROMEJECT` ioctl 会被驱动/桥接层以
+/// `MEDIUM REMOVAL PREVENTED (0x53/0x02)` 拒绝——ioctl 甚至可能返回 0 但托盘不动。
+/// util-linux 的 `eject` 会先试 CDROMEJECT，失败再走 SCSI `START STOP UNIT`，
+/// 实测只有后一条路径有效，所以优先用它，最后才回退到裸 ioctl。
 pub fn eject(device: &Path) -> Result<()> {
+    if let Ok(status) = std::process::Command::new("eject").arg(device).status() {
+        if status.success() {
+            return Ok(());
+        }
+    }
     let dev = open_device(device)?;
     let r = unsafe { libc::ioctl(dev.fd, CDROMEJECT, 0) };
     if r < 0 {
@@ -205,8 +215,17 @@ pub fn eject(device: &Path) -> Result<()> {
     Ok(())
 }
 
-/// 收回托盘（部分笔记本吸入式光驱不支持）。
+/// 收回托盘（部分吸入式光驱不支持）。
 pub fn close_tray(device: &Path) -> Result<()> {
+    if let Ok(status) = std::process::Command::new("eject")
+        .arg("-t")
+        .arg(device)
+        .status()
+    {
+        if status.success() {
+            return Ok(());
+        }
+    }
     let dev = open_device(device)?;
     let r = unsafe { libc::ioctl(dev.fd, CDROMCLOSETRAY, 0) };
     if r < 0 {

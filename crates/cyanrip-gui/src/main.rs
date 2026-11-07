@@ -117,6 +117,30 @@ fn main() -> glib::ExitCode {
             });
         }
 
+        // 弹出按钮自测：模拟点击，检查托盘状态，再自动收回
+        if std::env::var("CYANRIP_GUI_EJECTTEST").as_deref() == Ok("1") {
+            let ui2 = ui.clone();
+            glib::timeout_add_local(std::time::Duration::from_millis(800), move || {
+                ui2.eject_btn.emit_clicked();
+                println!("EJECTTEST clicked");
+                glib::ControlFlow::Break
+            });
+            let st3 = state.clone();
+            let app2 = app.clone();
+            glib::timeout_add_local(std::time::Duration::from_millis(2600), move || {
+                let dev = st3.borrow().device.clone();
+                let res = cyanrip_core::disc::probe(std::path::Path::new(&dev));
+                println!(
+                    "EJECTTEST probe_after_click={:?}",
+                    res.err().map(|e| e.to_string())
+                );
+                let closed = cyanrip_core::disc::close_tray(std::path::Path::new(&dev));
+                println!("EJECTTEST close={closed:?}");
+                app2.quit();
+                glib::ControlFlow::Break
+            });
+        }
+
         // 冒烟测试：CYANRIP_GUI_SMOKE=1 时 2 秒后自动退出
         if std::env::var("CYANRIP_GUI_SMOKE").as_deref() == Ok("1") {
             let app = app.clone();
