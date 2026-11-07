@@ -117,6 +117,11 @@ fn dirs_music() -> PathBuf {
 pub struct Secrets {
     #[serde(default)]
     pub discogs_token: String,
+    /// Google 自定义搜索（图片）的 API Key / 搜索引擎 ID，用于封面兜底
+    #[serde(default)]
+    pub google_api_key: String,
+    #[serde(default)]
+    pub google_cx: String,
 }
 
 impl Secrets {

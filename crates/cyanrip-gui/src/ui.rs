@@ -72,6 +72,10 @@ pub struct Ui {
     pub cover_btn: gtk::Button,
     /// (release key, 本地文件)；key = "来源:发行版 id"
     pub cover_cache: RefCell<Option<(String, PathBuf)>>,
+    /// 正在下载的候选 key，避免重复请求（Google 有配额）
+    pub cover_inflight: RefCell<Option<String>>,
+    /// 已经失败过的候选 key：自动流程不再重试，手动「取得封面」仍可重试
+    pub cover_failed: RefCell<Option<String>>,
     pub cover_rx: RefCell<Option<mpsc::Receiver<CoverMsg>>>,
     pub meta_apply_btn: gtk::Button,
     pub meta_rx: RefCell<Option<mpsc::Receiver<MetaOutcome>>>,
@@ -87,6 +91,8 @@ pub struct Ui {
     pub root_pick_btn: gtk::Button,
     pub bin_entry: adw::EntryRow,
     pub discogs_row: adw::PasswordEntryRow,
+    pub google_key_row: adw::PasswordEntryRow,
+    pub google_cx_row: adw::EntryRow,
     pub sound_switch: adw::SwitchRow,
     pub theme_combo: adw::ComboRow,
     pub theme_test_btn: gtk::Button,
@@ -333,6 +339,8 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
         root_pick: root_pick_btn,
         bin: bin_entry,
         discogs: discogs_row,
+        google_key: google_key_row,
+        google_cx: google_cx_row,
         sound: sound_switch,
         theme: theme_combo,
         theme_test: theme_test_btn,
@@ -394,6 +402,8 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
         cover_placeholder,
         cover_btn,
         cover_cache: RefCell::new(None),
+        cover_inflight: RefCell::new(None),
+        cover_failed: RefCell::new(None),
         cover_rx: RefCell::new(None),
         meta_apply_btn,
         meta_rx: RefCell::new(None),
@@ -408,6 +418,8 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
         root_pick_btn,
         bin_entry,
         discogs_row,
+        google_key_row,
+        google_cx_row,
         sound_switch,
         theme_combo,
         theme_test_btn,
@@ -439,6 +451,8 @@ struct SettingsWidgets {
     root_pick: gtk::Button,
     bin: adw::EntryRow,
     discogs: adw::PasswordEntryRow,
+    google_key: adw::PasswordEntryRow,
+    google_cx: adw::EntryRow,
     sound: adw::SwitchRow,
     theme: adw::ComboRow,
     theme_test: gtk::Button,
@@ -533,6 +547,16 @@ fn build_settings_page(state: &Rc<RefCell<AppState>>) -> SettingsWidgets {
         .text(s_secrets.discogs_token.clone())
         .build();
     meta_group.add(&discogs_row);
+    let google_key_row = adw::PasswordEntryRow::builder()
+        .title(tr("Google API Key（封面兜底，可选）"))
+        .text(s_secrets.google_api_key.clone())
+        .build();
+    let google_cx_row = adw::EntryRow::builder()
+        .title(tr("Google CX（搜索引擎 ID）"))
+        .text(s_secrets.google_cx.clone())
+        .build();
+    meta_group.add(&google_key_row);
+    meta_group.add(&google_cx_row);
 
     // 行为
     let behavior_group = adw::PreferencesGroup::builder().title(tr("行为")).build();
@@ -640,6 +664,8 @@ fn build_settings_page(state: &Rc<RefCell<AppState>>) -> SettingsWidgets {
         root_pick,
         bin: bin_entry,
         discogs: discogs_row,
+        google_key: google_key_row,
+        google_cx: google_cx_row,
         sound: sound_switch,
         theme: theme_combo,
         theme_test,
@@ -906,6 +932,22 @@ fn connect_signals(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
     {
         let st = state.clone();
         let ui2 = ui.clone();
+        ui.google_key_row.connect_changed(move |e| {
+            st.borrow_mut().secrets.google_api_key = e.text().to_string();
+            mark_dirty(&ui2, &st);
+        });
+    }
+    {
+        let st = state.clone();
+        let ui2 = ui.clone();
+        ui.google_cx_row.connect_changed(move |e| {
+            st.borrow_mut().secrets.google_cx = e.text().to_string();
+            mark_dirty(&ui2, &st);
+        });
+    }
+    {
+        let st = state.clone();
+        let ui2 = ui.clone();
         ui.bin_entry.connect_changed(move |e| {
             st.borrow_mut().settings.advanced.bin = e.text().to_string();
             mark_dirty(&ui2, &st);
@@ -1026,6 +1068,9 @@ fn refresh_settings_widgets(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
     ui.bin_entry.set_text(&s.advanced.bin);
     ui.discogs_row
         .set_text(&state.borrow().secrets.discogs_token);
+    ui.google_key_row
+        .set_text(&state.borrow().secrets.google_api_key);
+    ui.google_cx_row.set_text(&state.borrow().secrets.google_cx);
     ui.sound_switch.set_active(s.behavior.sound);
     let theme_idx = ui
         .sound_events
@@ -1990,6 +2035,22 @@ fn request_cover(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>, force: bool) {
             Some(t)
         }
     };
+    let google_key = {
+        let k = state.borrow().secrets.google_api_key.trim().to_string();
+        if k.is_empty() {
+            None
+        } else {
+            Some(k)
+        }
+    };
+    let google_cx = {
+        let c = state.borrow().secrets.google_cx.trim().to_string();
+        if c.is_empty() {
+            None
+        } else {
+            Some(c)
+        }
+    };
     let key = release_key(&release);
     // 已有缓存就直接用（不同素材源的 URL 可能不同，但同一条候选就认这张）
     let primary = release.cover_url.clone();
@@ -2000,7 +2061,15 @@ fn request_cover(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>, force: bool) {
                 return;
             }
         }
+        if ui.cover_inflight.borrow().as_deref() == Some(key.as_str()) {
+            return;
+        }
+        if ui.cover_failed.borrow().as_deref() == Some(key.as_str()) {
+            show_cover_placeholder(ui, &tr("无封面（自动获取失败，可点按钮重试）"));
+            return;
+        }
     }
+    *ui.cover_inflight.borrow_mut() = Some(key.clone());
     ui.cover_btn.set_sensitive(false);
     ui.cover_placeholder.set_text(&tr("正在取得封面…"));
     ui.cover_placeholder.set_visible(true);
@@ -2014,9 +2083,31 @@ fn request_cover(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>, force: bool) {
             Some(u) => meta::download_cover(u),
             None => Err(anyhow::anyhow!("没有封面地址")),
         };
+        let debug = std::env::var("CYANRIP_GUI_DEBUG").as_deref() == Ok("1");
         if res.is_err() {
+            if debug {
+                eprintln!("COVER step=primary failed");
+            }
             if let Some(alt) = meta::cover_fallback(&release, token.as_deref()) {
                 res = meta::download_cover(&alt);
+                if debug {
+                    eprintln!("COVER step=discogs ok={}", res.is_ok());
+                }
+            } else if debug {
+                eprintln!("COVER step=discogs none");
+            }
+        }
+        // Google 图片搜索兜底（需在设置里配 key + cx）
+        if res.is_err() {
+            match meta::google_cover(&release, google_key.as_deref(), google_cx.as_deref()) {
+                Some(alt) => {
+                    res = meta::download_cover(&alt);
+                    if debug {
+                        eprintln!("COVER step=google ok={}", res.is_ok());
+                    }
+                }
+                None if debug => eprintln!("COVER step=google skipped"),
+                None => {}
             }
         }
         let _ = tx.send((key_for_thread, res));
@@ -2162,8 +2253,12 @@ fn start_meta_pump(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
             rx.as_ref().and_then(|r| r.try_recv().ok())
         };
         if let Some((key, res)) = cover {
+            if ui2.cover_inflight.borrow().as_deref() == Some(key.as_str()) {
+                *ui2.cover_inflight.borrow_mut() = None;
+            }
             match res {
                 Ok(path) => {
+                    *ui2.cover_failed.borrow_mut() = None;
                     if std::env::var("CYANRIP_GUI_DEBUG").as_deref() == Ok("1") {
                         let size = std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
                         eprintln!("COVER key={key} bytes={size}");
@@ -2172,6 +2267,7 @@ fn start_meta_pump(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
                     show_cover(&ui2, &path);
                 }
                 Err(e) => {
+                    *ui2.cover_failed.borrow_mut() = Some(key.clone());
                     show_cover_placeholder(&ui2, &tr("封面下载失败"));
                     ui2.toast
                         .add_toast(adw::Toast::new(&format!("{}: {e}", tr("封面下载失败"))));

@@ -4,6 +4,7 @@ pub mod acoustid;
 pub mod cue;
 pub mod discid;
 pub mod discogs;
+pub mod google;
 pub mod musicbrainz;
 
 use serde::{Deserialize, Serialize};
@@ -132,6 +133,20 @@ pub fn discogs_token() -> Option<String> {
         .ok()
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())
+}
+
+/// Google 图片搜索兜底（需 key + cx，缺一不可）
+pub fn google_cover(
+    release: &MetaRelease,
+    api_key: Option<&str>,
+    cx: Option<&str>,
+) -> Option<String> {
+    let key = api_key?.trim();
+    let cx = cx?.trim();
+    if key.is_empty() || cx.is_empty() {
+        return None;
+    }
+    google::cover_for(release, key, cx)
 }
 
 /// 为候选找封面：先用它自己的 URL，失败再查 Discogs（条码/目录号/艺人+专辑）。
