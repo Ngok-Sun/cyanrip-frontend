@@ -132,7 +132,7 @@ pub fn probe(device: &Path) -> Result<DiscInfo> {
         bail!("无法读取 lead-out（返回 LBA 0）");
     }
 
-    let (vendor, model, firmware) = read_drive_attrs(device);
+    let (vendor, model, firmware) = drive_attrs(device);
     let tracks = build_tracks(&raw, lead.lba);
     let total_frames = lead.lba;
 
@@ -171,8 +171,8 @@ pub fn build_tracks(raw: &[(u32, u32, u8)], leadout: u32) -> Vec<TrackInfo> {
     out
 }
 
-/// 从 sysfs 读取光驱厂商/型号/固件。
-fn read_drive_attrs(device: &Path) -> (String, String, Option<String>) {
+/// 从 sysfs 读取光驱厂商/型号/固件（GUI 用来给设备下拉生成标签）。
+pub fn drive_attrs(device: &Path) -> (String, String, Option<String>) {
     let name = device
         .file_name()
         .and_then(|n| n.to_str())

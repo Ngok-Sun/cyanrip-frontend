@@ -25,7 +25,11 @@ pub struct Ui {
     pub toast: adw::ToastOverlay,
     pub stack: gtk::Stack,
     // 碟片页
-    pub device_entry: gtk::Entry,
+    pub device_dropdown: gtk::DropDown,
+    pub device_paths: RefCell<Vec<String>>,
+    pub rescan_btn: gtk::Button,
+    pub probe_btn: gtk::Button,
+    pub syncing_device: RefCell<bool>,
     pub detect_btn: gtk::Button,
     pub offset_spin: gtk::SpinButton,
     pub disc_summary: gtk::Label,
@@ -86,10 +90,15 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
     header.pack_end(&start_btn);
 
     // ---------- 碟片页 ----------
-    let device_entry = gtk::Entry::builder()
-        .text(state.borrow().device.as_str())
-        .hexpand(true)
-        .build();
+    // 设备下拉：列出系统里所有 /dev/sr*，标签附带型号
+    let (paths, labels) = scan_devices(&state.borrow().device);
+    let label_refs: Vec<&str> = labels.iter().map(String::as_str).collect();
+    let device_dropdown = gtk::DropDown::from_strings(&label_refs);
+    device_dropdown.set_hexpand(true);
+    if let Some(idx) = paths.iter().position(|p| p == &state.borrow().device) {
+        device_dropdown.set_selected(idx as u32);
+    }
+    let rescan_btn = gtk::Button::with_label(&tr("重新扫描"));
     let probe_btn = gtk::Button::with_label(&tr("探测"));
     let detect_btn = gtk::Button::with_label(&tr("测定偏移"));
     let offset_spin = gtk::SpinButton::with_range(-2000.0, 2000.0, 1.0);
@@ -98,7 +107,8 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
 
     let device_box = gtk::Box::new(Orientation::Horizontal, 8);
     device_box.append(&gtk::Label::new(Some(&tr("设备"))));
-    device_box.append(&device_entry);
+    device_box.append(&device_dropdown);
+    device_box.append(&rescan_btn);
     device_box.append(&probe_btn);
     device_box.append(&gtk::Label::new(Some(&tr("偏移"))));
     device_box.append(&offset_spin);
@@ -244,7 +254,11 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
         window: window.clone(),
         toast,
         stack,
-        device_entry,
+        device_dropdown,
+        device_paths: RefCell::new(paths),
+        rescan_btn,
+        probe_btn,
+        syncing_device: RefCell::new(false),
         detect_btn,
         offset_spin,
         disc_summary,
@@ -465,8 +479,7 @@ fn connect_signals(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
     {
         let ui2 = ui.clone();
         let st = state.clone();
-        ui.device_entry
-            .connect_activate(move |_| probe_disc(&ui2, &st));
+        ui.probe_btn.connect_clicked(move |_| probe_disc(&ui2, &st));
     }
     {
         let ui2 = ui.clone();
@@ -474,8 +487,6 @@ fn connect_signals(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
         ui.detect_btn
             .connect_clicked(move |_| detect_offset(&ui2, &st));
     }
-    // 探测按钮需要引用：通过碟片页的按钮查找不方便，这里用 device_entry 的激活替代，
-    // 同时把探测按钮单独接线（见 build 中 probe_btn）
     // 偏移变化 → 记到配置
     {
         let st = state.clone();
@@ -722,7 +733,7 @@ fn mark_dirty(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
 
 /// 探测碟片并刷新界面。
 pub fn probe_disc(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
-    let device = ui.device_entry.text().to_string();
+    let device = selected_device(ui);
     match disc::probe(Path::new(&device)) {
         Ok(info) => {
             let mut st = state.borrow_mut();
@@ -755,7 +766,7 @@ pub fn probe_disc(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
 
 /// 调用 `cyanrip -f` 测定读偏移（需要碟片在 AccurateRip 库中）。
 pub fn detect_offset(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
-    let device = ui.device_entry.text().to_string();
+    let device = selected_device(ui);
     let bin = state.borrow().settings.advanced.bin.clone();
     let model = state
         .borrow()
@@ -820,6 +831,64 @@ fn parse_offset_output(text: &str) -> Option<i32> {
     let rest = &text[idx + NEEDLE.len()..];
     let end = rest.find(" found")?;
     rest[..end].trim().parse().ok()
+}
+
+/// 下拉里当前选中的设备路径。
+fn selected_device(ui: &Rc<Ui>) -> String {
+    let idx = ui.device_dropdown.selected() as usize;
+    ui.device_paths
+        .borrow()
+        .get(idx)
+        .cloned()
+        .unwrap_or_else(|| "/dev/sr0".into())
+}
+
+/// 枚举 /dev/sr*，返回 (路径, 显示标签)。
+fn scan_devices(current: &str) -> (Vec<String>, Vec<String>) {
+    let mut paths: Vec<String> = disc::list_devices()
+        .into_iter()
+        .map(|p| p.display().to_string())
+        .collect();
+    // 配置里的设备即使当前不存在也保留，避免用户看不到自己的设置
+    if !paths.iter().any(|p| p == current) && !current.is_empty() {
+        paths.insert(0, current.to_string());
+    }
+    if paths.is_empty() {
+        paths.push("/dev/sr0".into());
+    }
+    let labels = paths
+        .iter()
+        .map(|p| {
+            let (vendor, model, _) = disc::drive_attrs(Path::new(p));
+            if model == "unknown" {
+                p.clone()
+            } else {
+                format!("{p}  ·  {} {}", vendor.trim(), model.trim())
+            }
+        })
+        .collect();
+    (paths, labels)
+}
+
+/// 重新扫描设备并保留当前选择。
+fn rescan_devices(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
+    let current = selected_device(ui);
+    let (paths, labels) = scan_devices(&current);
+    let label_refs: Vec<&str> = labels.iter().map(String::as_str).collect();
+    *ui.syncing_device.borrow_mut() = true;
+    ui.device_dropdown
+        .set_model(Some(&gtk::StringList::new(&label_refs)));
+    let idx = paths.iter().position(|p| p == &current).unwrap_or(0);
+    *ui.device_paths.borrow_mut() = paths;
+    ui.device_dropdown.set_selected(idx as u32);
+    *ui.syncing_device.borrow_mut() = false;
+    state.borrow_mut().device = current.clone();
+    ui.toast.add_toast(adw::Toast::new(&format!(
+        "{} {}",
+        tr("扫描到"),
+        ui.device_paths.borrow().len()
+    )));
+    let _ = state;
 }
 
 /// 根据逐轨勾选情况同步"全选"三态。

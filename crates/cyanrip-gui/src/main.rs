@@ -80,6 +80,16 @@ fn main() -> glib::ExitCode {
             let st2 = state.clone();
             let app2 = app.clone();
             glib::timeout_add_local(std::time::Duration::from_millis(400), move || {
+                // 设备下拉
+                let devices = ui2.device_paths.borrow().len();
+                let sel_idx = ui2.device_dropdown.selected() as usize;
+                let sel_dev = ui2
+                    .device_paths
+                    .borrow()
+                    .get(sel_idx)
+                    .cloned()
+                    .unwrap_or_default();
+
                 // 全选 / 取消全选
                 ui2.select_all.set_active(false);
                 let all_off = st2.borrow().selected.iter().all(|x| !*x);
@@ -100,7 +110,7 @@ fn main() -> glib::ExitCode {
                 ui2.save_btn.emit_clicked();
                 let clean = !st2.borrow().dirty && !ui2.save_btn.is_sensitive();
                 println!(
-                    "SELFTEST initial_disabled={initial_disabled} dirty={dirty} saved={saved} clean_after_save={clean} all_off={all_off} all_on={all_on}"
+                    "SELFTEST initial_disabled={initial_disabled} dirty={dirty} saved={saved} clean_after_save={clean} all_off={all_off} all_on={all_on} devices={devices} selected={sel_dev}"
                 );
                 app2.quit();
                 glib::ControlFlow::Break
