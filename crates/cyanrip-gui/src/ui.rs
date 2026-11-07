@@ -1486,11 +1486,12 @@ pub fn refresh_disc(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
         return;
     };
     ui.disc_summary.set_text(&format!(
-        "{} — {} {} · {} 轨 · {}",
+        "{} — {} {} · {} {} · {}",
         info.vendor.trim(),
         info.model.trim(),
         info.firmware.clone().unwrap_or_default(),
         info.audio_track_count(),
+        tr("轨"),
         fmt_duration(info.total_duration())
     ));
     for (i, t) in info.audio_tracks().enumerate() {
@@ -1585,7 +1586,7 @@ pub fn start_rip(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
     ui.progress_title.set_text(&tr("准备中…"));
     ui.bar_track.set_fraction(0.0);
     ui.bar_total.set_fraction(0.0);
-    ui.stats_label.set_text("等待第一帧进度…");
+    ui.stats_label.set_text(&tr("等待第一帧进度…"));
     ui.cancel_btn.set_sensitive(true);
     ui.start_btn.set_sensitive(false);
     ui.stack.set_visible_child_name("progress");
@@ -1679,7 +1680,7 @@ fn spawn_worker(
             Err(e) => {
                 let _ = tx.send(Event::RipFailed {
                     stage: cyanrip_core::event::Stage::Rip,
-                    message: format!("无法创建运行时：{e}"),
+                    message: format!("{}：{e}", tr("无法创建运行时")),
                 });
                 return;
             }
@@ -2472,7 +2473,7 @@ fn request_cover(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>, force: bool) {
         // 1) 候选自带的 URL；2) 失败则用 Discogs 兜底
         let mut res = match primary.as_deref() {
             Some(u) => meta::download_cover(u),
-            None => Err(anyhow::anyhow!("没有封面地址")),
+            None => Err(anyhow::anyhow!(tr("没有封面地址"))),
         };
         let debug = std::env::var("CYANRIP_GUI_DEBUG").as_deref() == Ok("1");
         if res.is_err() {
@@ -2534,7 +2535,7 @@ fn candidate_label(r: &MetaRelease) -> String {
         r.artist,
         r.title,
         disc,
-        r.date.clone().unwrap_or_else(|| "年份未知".into()),
+        r.date.clone().unwrap_or_else(|| tr("年份未知")),
         r.source.as_str(),
         r.score
     )
@@ -2796,7 +2797,7 @@ fn start_meta_pump(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
                             first.artist,
                             first.title,
                             disc_tag,
-                            first.date.clone().unwrap_or_else(|| "年份未知".into()),
+                            first.date.clone().unwrap_or_else(|| tr("年份未知")),
                             first.source.as_str()
                         ));
                         ui2.meta_status

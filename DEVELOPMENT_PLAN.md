@@ -906,6 +906,7 @@ CYANRIP_GUI_STANDALONE=1 CYANRIP_GUI_SELFTEST=1 ./target/debug/cyanrip-frontend
 
 | commit | 日期 | 说明 |
 |---|---|---|
+| `1f47e2f` | 11-08 | i18n: extract trm() strings (-ktrm) so settings group titles translate |
 | `15acdb7` | 11-08 | i18n: complete English translations (143 msgids) + coverage test |
 | `769f252` | 11-08 | i18n: translate new language settings; add po/update.sh |
 | `eefd133` | 11-08 | docs: mention UI language dropdown |
