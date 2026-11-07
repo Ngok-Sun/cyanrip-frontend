@@ -90,9 +90,10 @@ gtk-update-icon-cache -f -t ~/.local/share/icons/hicolor
 `po/en/LC_MESSAGES/cyanrip-frontend.mo` 或 `~/.local/share/locale/en/LC_MESSAGES/`：
 
 ```bash
-msgfmt -o po/en/LC_MESSAGES/cyanrip-frontend.mo po/en.po
-LANGUAGE=en cyanrip-frontend
+po/update.sh          # 重新提取 msgid + 合并 + 编译 + 安装 .mo
 ```
+
+改了界面文案就重跑一次；`en.po` 里留空的条目自动回落到中文。
 
 ## 自测开关
 

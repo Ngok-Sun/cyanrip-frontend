@@ -301,8 +301,10 @@ fn main() -> glib::ExitCode {
                 let lang = ui2.start_btn.label().map(|s| s.to_string());
                 let hdcd_txt = ui2.hdcd_check.label().map(|s| s.to_string());
                 let lang_sel = ui2.lang_combo.selected();
+                let lang_title = ui2.lang_combo.title().to_string();
+                let lang_sub = ui2.lang_combo.subtitle().map(|t| t.to_string());
                 println!(
-                    "SELFTEST initial_disabled={initial_disabled} dirty={dirty} saved={saved} clean_after_save={clean} all_off={all_off} all_on={all_on} devices={devices} selected={sel_dev} refresh_ok={refresh_ok} eject_icon={icon_ok} app_icon={app_icon_ok} win_icon={win_icon} row_markup={row_markup} start_btn={btn_w}x{btn_h} req={req_w}x{req_h} min={min_w}x{min_h}/{min_h_v} in_header={btn_in_header} chain={chain:?} eject_classes={eject_classes:?} covers_empty={covers_empty} covers_one={covers_one} covers_all={covers_all} token_dirty={token_dirty} token_saved={token_saved} secrets_mode={secrets_mode} config_has_token={config_has_token} refresh_classes={refresh_classes:?} theme_events={theme_events} theme_combo_ok={combo_ok} root_subtitle={root_subtitle:?} disc_after={after:?} lang={lang:?} hdcd={hdcd_txt:?} lang_sel={lang_sel} lang_dirty={lang_dirty} lang_saved={lang_saved}"
+                    "SELFTEST initial_disabled={initial_disabled} dirty={dirty} saved={saved} clean_after_save={clean} all_off={all_off} all_on={all_on} devices={devices} selected={sel_dev} refresh_ok={refresh_ok} eject_icon={icon_ok} app_icon={app_icon_ok} win_icon={win_icon} row_markup={row_markup} start_btn={btn_w}x{btn_h} req={req_w}x{req_h} min={min_w}x{min_h}/{min_h_v} in_header={btn_in_header} chain={chain:?} eject_classes={eject_classes:?} covers_empty={covers_empty} covers_one={covers_one} covers_all={covers_all} token_dirty={token_dirty} token_saved={token_saved} secrets_mode={secrets_mode} config_has_token={config_has_token} refresh_classes={refresh_classes:?} theme_events={theme_events} theme_combo_ok={combo_ok} root_subtitle={root_subtitle:?} disc_after={after:?} lang={lang:?} hdcd={hdcd_txt:?} lang_sel={lang_sel} lang_title={lang_title:?} lang_sub={lang_sub:?} lang_dirty={lang_dirty} lang_saved={lang_saved}"
                 );
                 app2.quit();
                 glib::ControlFlow::Break

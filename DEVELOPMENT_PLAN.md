@@ -860,6 +860,7 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 | 多语言 | `po/en.po`（149 条，94 条已译）+ `msgfmt`；`LANGUAGE=en` 下按钮变 "Start ripping" | 双语 selftest 打印 `lang=` |
 | markup 修复 | 分组标题/副标题统一 `markup_escape_text`（英文译名含 `&` 触发 Pango 报错） | en 运行无 Gtk-WARNING |
 | 界面语言下拉 | 设置→行为→界面语言：跟随系统/中文/English，写 `ui.language`，下次启动生效 | 6 种组合（3 设置 × 2 LANG）全部正确 |
+| 翻译同步 | `po/update.sh`：xgettext → msgmerge → msgfmt → 装到 `~/.local/share/locale`；补齐新增 3 条文案 | 英文界面下标题 "Interface language" / 副标题 "Takes effect after restarting the app" |
 
 ### M4 — 剩余工作
 
