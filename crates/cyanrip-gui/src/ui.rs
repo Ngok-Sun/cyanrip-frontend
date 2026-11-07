@@ -1228,10 +1228,11 @@ pub fn start_rip(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
         offset,
         extra_args: args,
         log_path: None,
-        cwd: Some(root),
+        cwd: Some(root.clone()),
     };
     spawn_worker(opts, info, tx, cancel_rx);
 
+    st.rip_dirs_before = Some(tag::dirs_with_flac(&root));
     st.events = Some(rx);
     st.cancel = Some(cancel_tx);
     st.phase = Phase::Ripping;
@@ -1519,7 +1520,7 @@ fn handle_event(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>, ev: Event) {
             };
             fill_result(ui, state, &report);
             let root = settings.output.root.clone();
-            let dir = tag::newest_rip_dir(&root);
+            let dir = pick_rip_dir(state, &root);
             *ui.last_rip_dir.borrow_mut() = dir;
             if settings.behavior.auto_tag_after_rip && state.borrow().current_release().is_some() {
                 apply_meta(ui, state);
@@ -1540,9 +1541,15 @@ fn handle_event(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>, ev: Event) {
                 );
             }
             if settings.behavior.shutdown_when_done {
-                let _ = std::process::Command::new("systemctl")
-                    .arg("poweroff")
-                    .spawn();
+                if crate::instance::other_instances() > 0 {
+                    // 另一个前端可能还在抓另一台光驱，关机留给最后一个完成的人
+                    ui.toast
+                        .add_toast(adw::Toast::new(&tr("另一个实例仍在运行，已跳过关机")));
+                } else {
+                    let _ = std::process::Command::new("systemctl")
+                        .arg("poweroff")
+                        .spawn();
+                }
             }
         }
         Event::RipFailed { stage, message } => {
@@ -2013,6 +2020,26 @@ fn list_sound_events() -> Vec<String> {
         events.push("complete".into());
     }
     events
+}
+
+/// 定位本次抓轨产生的目录：用开始前的快照做差集，避免同时抓两张碟时
+/// 把另一个实例的目录当成自己的（`newest_rip_dir` 只按 mtime 猜）。
+fn pick_rip_dir(state: &Rc<RefCell<AppState>>, root: &Path) -> Option<PathBuf> {
+    let current = tag::dirs_with_flac(root);
+    let before = state.borrow().rip_dirs_before.clone().unwrap_or_default();
+    let mut fresh: Vec<PathBuf> = current
+        .into_iter()
+        .filter(|d| !before.iter().any(|b| b == d))
+        .collect();
+    match fresh.len() {
+        0 => tag::newest_rip_dir(root),
+        1 => fresh.pop(),
+        _ => fresh.into_iter().max_by_key(|d| {
+            std::fs::metadata(d)
+                .and_then(|m| m.modified())
+                .unwrap_or(std::time::UNIX_EPOCH)
+        }),
+    }
 }
 
 fn play_done_sound(settings: &Settings) {

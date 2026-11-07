@@ -177,6 +177,25 @@ fn write_tags(
 }
 
 /// 在输出根目录下找最近一次抓轨产生的目录（含 .flac 的目录）。
+/// 输出根目录下所有含 FLAC 的子目录
+pub fn dirs_with_flac(root: &Path) -> Vec<PathBuf> {
+    let Ok(rd) = std::fs::read_dir(root) else {
+        return Vec::new();
+    };
+    rd.flatten()
+        .map(|e| e.path())
+        .filter(|p| p.is_dir())
+        .filter(|p| {
+            std::fs::read_dir(p)
+                .map(|rd| {
+                    rd.flatten()
+                        .any(|e| e.path().extension().and_then(|x| x.to_str()) == Some("flac"))
+                })
+                .unwrap_or(false)
+        })
+        .collect()
+}
+
 pub fn newest_rip_dir(root: &Path) -> Option<PathBuf> {
     let mut best: Option<(std::time::SystemTime, PathBuf)> = None;
     for entry in std::fs::read_dir(root).ok()?.flatten() {

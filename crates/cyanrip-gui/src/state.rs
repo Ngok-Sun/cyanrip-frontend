@@ -43,11 +43,18 @@ pub struct AppState {
     pub meta_pending: bool,
     /// 输出根目录被 `CYANRIP_GUI_ROOT` 临时覆盖（自测用）：不要写回配置
     pub ephemeral_root: bool,
+    /// 本次抓轨开始前，输出根目录下已有的 FLAC 目录（用来精确定位本次产物）
+    pub rip_dirs_before: Option<Vec<PathBuf>>,
 }
 
 impl AppState {
     pub fn new() -> Self {
-        let config_path = Settings::default_path();
+        // 多开时用 CYANRIP_GUI_CONFIG 指定独立配置，避免两个实例互相覆盖设置
+        let config_path = std::env::var("CYANRIP_GUI_CONFIG")
+            .ok()
+            .filter(|p| !p.trim().is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(Settings::default_path);
         let mut settings = Settings::load(&config_path).unwrap_or_default();
         // 自测用：临时把输出根目录指到别处，避免污染真实音乐库
         let mut ephemeral_root = false;
@@ -76,6 +83,7 @@ impl AppState {
             track_titles: Vec::new(),
             meta_pending: false,
             ephemeral_root,
+            rip_dirs_before: None,
         }
     }
 

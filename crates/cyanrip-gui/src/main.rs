@@ -1,6 +1,7 @@
 //! cyanrip-frontend：cyanrip 的 GTK4 / libadwaita 前端。
 
 mod i18n;
+mod instance;
 mod state;
 mod ui;
 
@@ -23,6 +24,14 @@ fn main() -> glib::ExitCode {
 
     app.connect_activate(|app| {
         let state = Rc::new(RefCell::new(state::AppState::new()));
+        // 登记本实例（多开时用于「抓完关机」互斥与调试）
+        let lock = instance::register(&state.borrow().device);
+        if let Some(lock) = lock.clone() {
+            let lock_for_exit = lock.clone();
+            app.connect_shutdown(move |_| {
+                instance::unregister(&lock_for_exit);
+            });
+        }
         let ui = ui::build(app, state.clone());
         ui::refresh_disc(&ui, &state);
 

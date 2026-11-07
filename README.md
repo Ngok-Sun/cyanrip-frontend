@@ -25,6 +25,17 @@ cargo build
 cargo test          # 32 个单测 + 2 个流式/取消集成测试，全部离线
 ```
 
+## 双光驱同时抓轨
+
+默认单实例。要用两台光驱并行抓轨，用第二个入口（独立配置、允许并存）：
+
+```bash
+cyanrip-frontend-2     # = CYANRIP_GUI_STANDALONE=1 + CYANRIP_GUI_CONFIG=~/.config/cyanrip-frontend/second.toml
+```
+
+两边各自选光驱即可；设备/偏移/输出目录互不影响，抓完关机也会等最后一个实例结束。
+注意不要用同一个输出根目录抓**同名专辑**。
+
 ## 启动 GUI
 
 ```bash

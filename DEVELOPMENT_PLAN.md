@@ -420,6 +420,21 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 
 ---
 
+### 7.7 多实例（两台光驱同时抓轨）
+
+默认是单实例应用（GApplication）：再启动一个进程只会把已有窗口提到前台。
+要并行抓两张碟，需要显式开第二个实例并给它独立配置：
+
+- `~/.local/bin/cyanrip-frontend-2`：内部设 `CYANRIP_GUI_STANDALONE=1`（允许并存）
+  与 `CYANRIP_GUI_CONFIG=~/.config/cyanrip-frontend/second.toml`（独立配置）
+- 两个实例各自在下拉里选自己的光驱；设备、偏移、输出根目录、模板互不覆盖
+- 本次抓轨产物目录用「开始前快照 + 结束时差集」定位（`pick_rip_dir`），不再靠全局
+  mtime 猜，否则并发时可能把对方还没写完的目录当成自己的去打标签
+- 每个实例在 `$XDG_RUNTIME_DIR/cyanrip-frontend/<pid>.lock` 登记；「抓完关机」若发现
+  还有其它实例存活就跳过关机并提示，避免先抓完的那台把机器关掉
+- 仍然会冲突的情况：两个实例写**同一个输出根目录且专辑同名**（重名会失败）；
+  MusicBrainz / Discogs 的限速是按应用计的，两边同时识别可能各自退避重试
+
 ## 8. 元数据与标签
 
 ### 8.1 识别链路
