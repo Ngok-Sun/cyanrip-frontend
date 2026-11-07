@@ -9,7 +9,7 @@ use adw::prelude::*;
 use cyanrip_core::config::Settings;
 use cyanrip_core::disc;
 use cyanrip_core::event::Event;
-use cyanrip_core::meta::{self, MetaRelease};
+use cyanrip_core::meta::{self, MetaRelease, MetaSource};
 use cyanrip_core::model::{fmt_duration, ArState, DiscInfo, RipReport};
 use cyanrip_core::rip::{self, RipOptions};
 use cyanrip_core::tag;
@@ -63,6 +63,7 @@ pub struct Ui {
     pub meta_status: gtk::Label,
     pub meta_label: gtk::Label,
     pub meta_dropdown: gtk::DropDown,
+    pub import_cue_btn: gtk::Button,
     pub meta_apply_btn: gtk::Button,
     pub meta_rx: RefCell<Option<mpsc::Receiver<MetaOutcome>>>,
     pub last_rip_dir: RefCell<Option<PathBuf>>,
@@ -157,8 +158,13 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
     let meta_dropdown = gtk::DropDown::from_strings(&["—"]);
     meta_dropdown.set_hexpand(true);
     meta_dropdown.set_visible(false);
+    let import_cue_btn = gtk::Button::with_label(&tr("导入曲目信息"));
+    import_cue_btn.set_tooltip_text(Some(&tr(
+        "从 CUE 表读取曲目名/专辑信息（用于 CD 数据库里查不到的碟）",
+    )));
     let meta_row = gtk::Box::new(Orientation::Horizontal, 8);
     meta_row.append(&meta_dropdown);
+    meta_row.append(&import_cue_btn);
     let disc_meta_box = gtk::Box::new(Orientation::Vertical, 6);
     disc_meta_box.append(&meta_label);
     disc_meta_box.append(&meta_row);
@@ -347,6 +353,7 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
         meta_status,
         meta_label,
         meta_dropdown,
+        import_cue_btn,
         meta_apply_btn,
         meta_rx: RefCell::new(None),
         last_rip_dir: RefCell::new(None),
@@ -723,6 +730,31 @@ fn connect_signals(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
         let st = state.clone();
         ui.meta_apply_btn
             .connect_clicked(move |_| apply_meta(&ui2, &st));
+    }
+    // 导入 CUE
+    {
+        let ui2 = ui.clone();
+        let st = state.clone();
+        ui.import_cue_btn.connect_clicked(move |_| {
+            let filter = gtk::FileFilter::new();
+            filter.set_name(Some("CUE"));
+            filter.add_pattern("*.cue");
+            filter.add_pattern("*.CUE");
+            let filters = gtk::gio::ListStore::new::<gtk::FileFilter>();
+            filters.append(&filter);
+            let dialog = gtk::FileDialog::builder()
+                .title(tr("选择 CUE 文件"))
+                .modal(true)
+                .filters(&filters)
+                .build();
+            let ui3 = ui2.clone();
+            let st3 = st.clone();
+            dialog.open(Some(&ui2.window), gtk::gio::Cancellable::NONE, move |res| {
+                let Ok(file) = res else { return };
+                let Some(path) = file.path() else { return };
+                import_cue_path(&ui3, &st3, &path);
+            });
+        });
     }
     {
         let ui2 = ui.clone();
@@ -1841,6 +1873,66 @@ fn fmt_eta(d: Duration) -> String {
     }
 }
 
+/// 导入 CUE：作为一条候选插到最前面并选中。
+pub fn import_cue_path(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>, path: &Path) {
+    let release = match meta::cue::parse_file(path) {
+        Ok(r) => r,
+        Err(e) => {
+            ui.toast
+                .add_toast(adw::Toast::new(&format!("{}: {e:#}", tr("导入失败"))));
+            return;
+        }
+    };
+    let track_count = release.tracks.len();
+    let title = release.title.clone();
+    let artist = release.artist.clone();
+    {
+        let mut st = state.borrow_mut();
+        st.meta_releases.retain(|r| r.source != MetaSource::Cue);
+        st.meta_releases.insert(0, release);
+        st.select_release(0);
+    }
+    let labels: Vec<String> = state
+        .borrow()
+        .meta_releases
+        .iter()
+        .map(candidate_label)
+        .collect();
+    let refs: Vec<&str> = labels.iter().map(String::as_str).collect();
+    ui.meta_dropdown
+        .set_model(Some(&gtk::StringList::new(&refs)));
+    ui.meta_dropdown.set_visible(true);
+    ui.meta_dropdown.set_selected(0);
+    ui.meta_label.set_text(&format!(
+        "CUE：{} — {}（{} {}）",
+        artist,
+        title,
+        track_count,
+        tr("轨")
+    ));
+    ui.meta_apply_btn.set_sensitive(true);
+    refresh_disc(ui, state);
+    ui.toast
+        .add_toast(adw::Toast::new(&format!("{} {}", tr("已导入"), title)));
+}
+
+fn candidate_label(r: &MetaRelease) -> String {
+    let disc = if r.disc_total > 1 {
+        format!(" CD{}/{}", r.disc_number, r.disc_total)
+    } else {
+        String::new()
+    };
+    format!(
+        "{} — {}{}（{}，{}，score {}%）",
+        r.artist,
+        r.title,
+        disc,
+        r.date.clone().unwrap_or_else(|| "年份未知".into()),
+        r.source.as_str(),
+        r.score
+    )
+}
+
 /// 后台识别元数据（阻塞的 HTTP 调用放线程里）。
 fn start_meta_resolve(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
     let Some(disc) = state.borrow().disc.clone() else {
@@ -1960,12 +2052,22 @@ fn start_meta_pump(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
                     if dir.is_some() {
                         *ui2.last_rip_dir.borrow_mut() = dir;
                     }
-                    if list.is_empty() {
+                    // 手工导入的 CUE 优先：网络结果不能把它顶掉
+                    let cues: Vec<MetaRelease> = st
+                        .borrow()
+                        .meta_releases
+                        .iter()
+                        .filter(|r| matches!(r.source, MetaSource::Cue))
+                        .cloned()
+                        .collect();
+                    let mut merged = cues.clone();
+                    merged.extend(list);
+                    if merged.is_empty() {
                         ui2.meta_label
-                            .set_text(&tr("未识别 · 没有匹配（可手工补或试试 AcoustID)"));
+                            .set_text(&tr("未识别 · 没有匹配（可导入 CUE 或换 Discogs token）"));
                         ui2.meta_dropdown.set_visible(false);
                         ui2.meta_status
-                            .set_text(&tr("没有找到匹配的发行版（可换 Discogs token 或手工补）"));
+                            .set_text(&tr("没有找到匹配的发行版（可导入 CUE 或换 token）"));
                         ui2.meta_apply_btn.set_sensitive(false);
                         let mut s = st.borrow_mut();
                         s.meta_releases.clear();
@@ -1973,24 +2075,12 @@ fn start_meta_pump(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
                         drop(s);
                         refresh_disc(&ui2, &st);
                     } else {
-                        let labels: Vec<String> = list
-                            .iter()
-                            .map(|r| {
-                                format!(
-                                    "{} — {}（{}，{}，score {}%）",
-                                    r.artist,
-                                    r.title,
-                                    r.date.clone().unwrap_or_else(|| "年份未知".into()),
-                                    r.source.as_str(),
-                                    r.score
-                                )
-                            })
-                            .collect();
+                        let labels: Vec<String> = merged.iter().map(candidate_label).collect();
                         let refs: Vec<&str> = labels.iter().map(String::as_str).collect();
                         ui2.meta_dropdown
                             .set_model(Some(&gtk::StringList::new(&refs)));
                         ui2.meta_dropdown.set_visible(true);
-                        let first = &list[0];
+                        let first = &merged[0];
                         let disc_tag = if first.disc_total > 1 {
                             format!(" CD{}/{}", first.disc_number, first.disc_total)
                         } else {
@@ -2005,16 +2095,15 @@ fn start_meta_pump(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
                             first.source.as_str()
                         ));
                         ui2.meta_status
-                            .set_text(&format!("{} {}", tr("找到候选："), list.len()));
+                            .set_text(&format!("{} {}", tr("找到候选："), merged.len()));
                         let mut s = st.borrow_mut();
-                        s.meta_releases = list;
+                        s.meta_releases = merged;
                         s.select_release(0);
                         let has_dir = ui2.last_rip_dir.borrow().is_some();
                         drop(s);
                         ui2.meta_dropdown.set_selected(0);
                         ui2.meta_apply_btn.set_sensitive(has_dir);
                         refresh_disc(&ui2, &st);
-                        // 不能在这里写标签：抓轨还没结束时文件是半成品
                         if std::env::var("CYANRIP_GUI_AUTOAPPLY").as_deref() == Ok("1")
                             && st.borrow().phase == Phase::Done
                         {

@@ -20,4 +20,5 @@ tracing.workspace = true
 chrono.workspace = true
 directories.workspace = true
 sha1.workspace = true
+encoding_rs.workspace = true
 ureq.workspace = true

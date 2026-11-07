@@ -53,6 +53,18 @@ fn main() -> glib::ExitCode {
             );
         }
 
+        // 自测/脚本：启动时直接导入一个 CUE
+        if let Ok(path) = std::env::var("CYANRIP_GUI_IMPORT_CUE") {
+            let p = std::path::PathBuf::from(path);
+            if p.exists() {
+                ui::import_cue_path(&ui, &state, &p);
+                println!(
+                    "CUE_IMPORT tracks={:?}",
+                    state.borrow().track_titles.iter().take(3).cloned().collect::<Vec<_>>()
+                );
+            }
+        }
+
         // 自动抓轨（端到端自测）：只抓第一轨，完成后打印结果并退出
         if std::env::var("CYANRIP_GUI_AUTORIP").as_deref() == Ok("1") {
             {

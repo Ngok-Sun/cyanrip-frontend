@@ -1,6 +1,7 @@
 //! 元数据源：MusicBrainz / AcoustID / Discogs，以及统一的发行版结构。
 
 pub mod acoustid;
+pub mod cue;
 pub mod discid;
 pub mod discogs;
 pub mod musicbrainz;
@@ -19,6 +20,8 @@ pub enum MetaSource {
     MusicBrainz,
     AcoustId,
     Discogs,
+    /// 手工导入的 CUE 表
+    Cue,
 }
 
 impl MetaSource {
@@ -27,6 +30,7 @@ impl MetaSource {
             MetaSource::MusicBrainz => "MusicBrainz",
             MetaSource::AcoustId => "AcoustID",
             MetaSource::Discogs => "Discogs",
+            MetaSource::Cue => "CUE",
         }
     }
 }

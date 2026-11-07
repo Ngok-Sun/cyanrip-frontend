@@ -322,7 +322,8 @@ language = "zh"               # 本阶段只打包 zh，其余语言留接口
 - 「测定偏移」调 `cyanrip -f`，结果按光驱型号记忆
 - 「全选」为三态复选框：逐轨取消时自动变半选
 - 曲目表用 `GtkListBox` + `AdwActionRow`（13–24 轨规模足够，未用 ColumnView）
-- **元数据条**（曲目表上方）：识别状态 + 候选下拉（重试走「刷新」）。探测成功即自动识别
+- **元数据条**（曲目表上方）：识别状态 + 候选下拉 +「导入曲目信息」（选 CUE 表，用于数据库
+  里查不到的碟；CUE 作为最高优先级候选，网络结果不会把它顶掉）（重试走「刷新」）。探测成功即自动识别
   （只用 TOC + MCN，不需要音频），曲目表直接显示真实曲名；切换候选会同步更新标题
   和传给 cyanrip 的 `-a`/`-t`
 - 抓轨前的识别未完成就点「开始」时，等识别结束（≤15s）再启动，避免丢掉元数据
@@ -522,6 +523,8 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 - `meta::acoustid`：`fpcalc` 指纹 + AcoustID 查询（需 `CYANRIP_ACOUSTID_KEY`）
 - `disc::probe` 增加 MCN 读取（`CDROM_GET_MCN`）——很多商业碟的 MCN 就是条码
 - 解析顺序：MB(discid) → Discogs(MCN/条码) → AcoustID+Discogs(关键字)，按轨数/时长打分
+- 手工兜底：`meta::cue` 解析 CUE 表（UTF-8/GBK 自动识别），取 PERFORMER/TITLE/REM DATE/
+  DISCNUMBER/TOTALDISCS/CATALOG 与逐轨 TITLE；`Cue` 作为独立数据源，优先级最高
 - `tag`：重命名并归档到 `艺人/专辑/`，`metaflac` 写 Vorbis comment，保留 ReplayGain/AcoustID，
   可内嵌封面；写后可用 `flac -t` 校验
 - GUI：结果页新增「元数据」区块——自动识别（`auto_tag_after_rip` 开启时）或手动「识别元数据」，

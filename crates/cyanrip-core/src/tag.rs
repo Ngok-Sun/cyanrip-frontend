@@ -161,7 +161,7 @@ fn write_tags(
         crate::meta::MetaSource::Discogs => {
             tags.push(("DISCOGS_RELEASE".into(), release.id.clone()))
         }
-        crate::meta::MetaSource::AcoustId => {}
+        crate::meta::MetaSource::AcoustId | crate::meta::MetaSource::Cue => {}
     }
     tags.push((
         "COMMENT".into(),
