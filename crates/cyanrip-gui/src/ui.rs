@@ -159,8 +159,8 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
     // 放在碟片信息与曲目列表之间，水平居中
     let start_row = gtk::Box::new(Orientation::Horizontal, 0);
     start_row.set_halign(gtk::Align::Center);
-    start_row.set_margin_top(4);
-    start_row.set_margin_bottom(4);
+    start_row.set_margin_top(6);
+    start_row.set_margin_bottom(2);
     start_row.append(&start_btn);
 
     // ---------- 碟片页 ----------
@@ -247,6 +247,8 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
     info_text.set_hexpand(true);
     info_text.append(&disc_summary);
     info_text.append(&disc_meta_box);
+    // 紧跟在「专辑/候选」下拉框下面
+    info_text.append(&start_row);
     let info_row = gtk::Box::new(Orientation::Horizontal, 12);
     info_row.append(&cover_area);
     info_row.append(&info_text);
@@ -272,7 +274,6 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
     disc_page.set_margin_end(12);
     disc_page.append(&device_box);
     disc_page.append(&info_row);
-    disc_page.append(&start_row);
     disc_page.append(&select_row);
     disc_page.append(&track_scroll);
 

@@ -251,12 +251,16 @@ fn main() -> glib::ExitCode {
                 let (req_w, req_h) = ui2.start_btn.size_request();
                 let (min_w, min_h, _, _) = ui2.start_btn.measure(gtk::Orientation::Horizontal, -1);
                 let (_, min_h_v, _, _) = ui2.start_btn.measure(gtk::Orientation::Vertical, min_w);
-                let btn_in_header = ui2
-                    .start_btn
-                    .parent()
-                    .and_then(|p| p.parent())
-                    .map(|p| p.type_().name() == "GtkHeaderBar")
-                    .unwrap_or(false);
+                let mut chain = Vec::new();
+                let mut cur = ui2.start_btn.parent();
+                while let Some(w) = cur {
+                    chain.push(w.type_().name().to_string());
+                    if chain.len() >= 3 {
+                        break;
+                    }
+                    cur = w.parent();
+                }
+                let btn_in_header = chain.iter().any(|n| n == "GtkHeaderBar");
                 let app_icon_ok = gtk::gdk::Display::default()
                     .map(|d| {
                         gtk::IconTheme::for_display(&d).has_icon("io.github.cyanrip.Frontend")
@@ -264,7 +268,7 @@ fn main() -> glib::ExitCode {
                     .unwrap_or(false);
 
                 println!(
-                    "SELFTEST initial_disabled={initial_disabled} dirty={dirty} saved={saved} clean_after_save={clean} all_off={all_off} all_on={all_on} devices={devices} selected={sel_dev} refresh_ok={refresh_ok} eject_icon={icon_ok} app_icon={app_icon_ok} win_icon={win_icon} start_btn={btn_w}x{btn_h} req={req_w}x{req_h} min={min_w}x{min_h}/{min_h_v} in_header={btn_in_header} eject_classes={eject_classes:?} covers_empty={covers_empty} covers_one={covers_one} covers_all={covers_all} token_dirty={token_dirty} token_saved={token_saved} secrets_mode={secrets_mode} config_has_token={config_has_token} refresh_classes={refresh_classes:?} theme_events={theme_events} theme_combo_ok={combo_ok} root_subtitle={root_subtitle:?} disc_after={after:?}"
+                    "SELFTEST initial_disabled={initial_disabled} dirty={dirty} saved={saved} clean_after_save={clean} all_off={all_off} all_on={all_on} devices={devices} selected={sel_dev} refresh_ok={refresh_ok} eject_icon={icon_ok} app_icon={app_icon_ok} win_icon={win_icon} start_btn={btn_w}x{btn_h} req={req_w}x{req_h} min={min_w}x{min_h}/{min_h_v} in_header={btn_in_header} chain={chain:?} eject_classes={eject_classes:?} covers_empty={covers_empty} covers_one={covers_one} covers_all={covers_all} token_dirty={token_dirty} token_saved={token_saved} secrets_mode={secrets_mode} config_has_token={config_has_token} refresh_classes={refresh_classes:?} theme_events={theme_events} theme_combo_ok={combo_ok} root_subtitle={root_subtitle:?} disc_after={after:?}"
                 );
                 app2.quit();
                 glib::ControlFlow::Break
