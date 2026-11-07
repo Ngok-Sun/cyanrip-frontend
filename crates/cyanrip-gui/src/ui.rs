@@ -121,7 +121,6 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
     rescan_btn.set_tooltip_text(Some(&tr("重新扫描光驱并读取当前碟片")));
     // 通用「弹出」图标（Adwaita/Yaru 都有 media-eject-symbolic）
     let eject_btn = gtk::Button::from_icon_name("media-eject-symbolic");
-    eject_btn.add_css_class("flat");
     eject_btn.set_tooltip_text(Some(&tr("弹出光驱托盘")));
     eject_btn.update_property(&[gtk::accessible::Property::Label(&tr("弹出"))]);
     let detect_btn = gtk::Button::with_label(&tr("测定偏移"));
