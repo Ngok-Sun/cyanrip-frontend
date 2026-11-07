@@ -268,6 +268,39 @@ fn urlencode(s: &str) -> String {
     out
 }
 
+/// 找一张能用的封面：优先按条码，其次目录号/关键字。
+/// 用于 MusicBrainz 候选（Cover Art Archive 常常没有图）的兜底。
+pub fn find_cover(
+    barcode: Option<&str>,
+    catno: Option<&str>,
+    query: &str,
+    token: Option<&str>,
+) -> Option<String> {
+    set_token(token.map(|t| t.to_string()));
+    if let Some(code) = barcode.filter(|b| !b.trim().is_empty()) {
+        if let Ok(rels) = by_barcode(code, 0) {
+            if let Some(url) = rels.into_iter().find_map(|r| r.cover_url) {
+                return Some(url);
+            }
+        }
+    }
+    let q = catno.filter(|c| !c.trim().is_empty()).unwrap_or(query);
+    if q.trim().is_empty() {
+        return None;
+    }
+    let results = search(q, 0).ok()?;
+    for r in results.into_iter().take(3) {
+        if let Ok(id) = r.id.parse::<u64>() {
+            if let Ok(rels) = get_release(id, 0) {
+                if let Some(url) = rels.into_iter().find_map(|x| x.cover_url) {
+                    return Some(url);
+                }
+            }
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

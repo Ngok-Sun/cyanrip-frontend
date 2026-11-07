@@ -30,6 +30,9 @@ pub enum MetaOutcome {
     ApplyFailed(String),
 }
 
+/// 封面下载线程 → UI：(候选 key, 下载结果)
+type CoverMsg = (String, anyhow::Result<PathBuf>);
+
 pub struct Ui {
     pub window: adw::ApplicationWindow,
     pub toast: adw::ToastOverlay,
@@ -64,6 +67,12 @@ pub struct Ui {
     pub meta_label: gtk::Label,
     pub meta_dropdown: gtk::DropDown,
     pub import_cue_btn: gtk::Button,
+    pub cover_picture: gtk::Picture,
+    pub cover_placeholder: gtk::Label,
+    pub cover_btn: gtk::Button,
+    /// (release key, 本地文件)；key = "来源:发行版 id"
+    pub cover_cache: RefCell<Option<(String, PathBuf)>>,
+    pub cover_rx: RefCell<Option<mpsc::Receiver<CoverMsg>>>,
     pub meta_apply_btn: gtk::Button,
     pub meta_rx: RefCell<Option<mpsc::Receiver<MetaOutcome>>>,
     pub last_rip_dir: RefCell<Option<PathBuf>>,
@@ -169,6 +178,34 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
     disc_meta_box.append(&meta_label);
     disc_meta_box.append(&meta_row);
 
+    // 封面预览：识别到候选后自动抓取并显示
+    let cover_picture = gtk::Picture::new();
+    cover_picture.set_size_request(180, 180);
+    cover_picture.set_content_fit(gtk::ContentFit::Contain);
+    cover_picture.set_can_shrink(true);
+    cover_picture.set_visible(false);
+    let cover_placeholder = gtk::Label::new(Some(&tr("无封面")));
+    cover_placeholder.set_size_request(180, 180);
+    cover_placeholder.set_wrap(true);
+    cover_placeholder.add_css_class("dim-label");
+    let cover_btn = gtk::Button::with_label(&tr("取得封面"));
+    let cover_area = gtk::Box::new(Orientation::Vertical, 6);
+    cover_area.append(&cover_placeholder);
+    cover_area.append(&cover_picture);
+    cover_area.append(&cover_btn);
+    cover_area.add_css_class("card");
+    cover_area.set_size_request(196, -1);
+    cover_area.set_halign(gtk::Align::Start);
+    cover_area.set_valign(gtk::Align::Start);
+
+    let info_text = gtk::Box::new(Orientation::Vertical, 6);
+    info_text.set_hexpand(true);
+    info_text.append(&disc_summary);
+    info_text.append(&disc_meta_box);
+    let info_row = gtk::Box::new(Orientation::Horizontal, 12);
+    info_row.append(&cover_area);
+    info_row.append(&info_text);
+
     let select_all = gtk::CheckButton::with_label(&tr("全选"));
     select_all.set_active(true);
     select_all.set_tooltip_text(Some(&tr("全选 / 取消全选")));
@@ -189,8 +226,7 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
     disc_page.set_margin_start(12);
     disc_page.set_margin_end(12);
     disc_page.append(&device_box);
-    disc_page.append(&disc_summary);
-    disc_page.append(&disc_meta_box);
+    disc_page.append(&info_row);
     disc_page.append(&select_row);
     disc_page.append(&track_scroll);
 
@@ -354,6 +390,11 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
         meta_label,
         meta_dropdown,
         import_cue_btn,
+        cover_picture,
+        cover_placeholder,
+        cover_btn,
+        cover_cache: RefCell::new(None),
+        cover_rx: RefCell::new(None),
         meta_apply_btn,
         meta_rx: RefCell::new(None),
         last_rip_dir: RefCell::new(None),
@@ -731,6 +772,13 @@ fn connect_signals(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
         ui.meta_apply_btn
             .connect_clicked(move |_| apply_meta(&ui2, &st));
     }
+    // 取得封面（手动）
+    {
+        let ui2 = ui.clone();
+        let st = state.clone();
+        ui.cover_btn
+            .connect_clicked(move |_| request_cover(&ui2, &st, true));
+    }
     // 导入 CUE
     {
         let ui2 = ui.clone();
@@ -1032,6 +1080,10 @@ pub fn probe_disc(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
             refresh_disc(ui, state);
             sync_select_all(ui, state);
             ui.start_btn.set_sensitive(true);
+            if !same_disc {
+                *ui.cover_cache.borrow_mut() = None;
+                show_cover_placeholder(ui, &tr("无封面"));
+            }
             // 抓轨前识别：元数据只需 TOC + MCN，不依赖音频
             start_meta_resolve(ui, state);
         }
@@ -1912,8 +1964,77 @@ pub fn import_cue_path(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>, path: &Path) 
     ));
     ui.meta_apply_btn.set_sensitive(true);
     refresh_disc(ui, state);
+    request_cover(ui, state, false);
     ui.toast
         .add_toast(adw::Toast::new(&format!("{} {}", tr("已导入"), title)));
+}
+
+/// 候选的唯一键：同一次识别里区分不同发行版
+fn release_key(r: &MetaRelease) -> String {
+    format!("{}:{}", r.source.as_str(), r.id)
+}
+
+/// 取候选的封面：缓存命中就直接显示，否则后台下载（不阻塞 GTK 主线程）。
+fn request_cover(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>, force: bool) {
+    let release = state.borrow().current_release().cloned();
+    let Some(release) = release else {
+        show_cover_placeholder(ui, &tr("无封面"));
+        return;
+    };
+    let token = {
+        let st = state.borrow();
+        let t = st.secrets.discogs_token.trim().to_string();
+        if t.is_empty() {
+            None
+        } else {
+            Some(t)
+        }
+    };
+    let key = release_key(&release);
+    // 已有缓存就直接用（不同素材源的 URL 可能不同，但同一条候选就认这张）
+    let primary = release.cover_url.clone();
+    if !force {
+        if let Some((cached_key, path)) = ui.cover_cache.borrow().as_ref() {
+            if cached_key == &key && path.exists() {
+                show_cover(ui, path);
+                return;
+            }
+        }
+    }
+    ui.cover_btn.set_sensitive(false);
+    ui.cover_placeholder.set_text(&tr("正在取得封面…"));
+    ui.cover_placeholder.set_visible(true);
+    ui.cover_picture.set_visible(false);
+    let key_for_thread = key.clone();
+    let (tx, rx) = mpsc::channel();
+    *ui.cover_rx.borrow_mut() = Some(rx);
+    std::thread::spawn(move || {
+        // 1) 候选自带的 URL；2) 失败则用 Discogs 兜底
+        let mut res = match primary.as_deref() {
+            Some(u) => meta::download_cover(u),
+            None => Err(anyhow::anyhow!("没有封面地址")),
+        };
+        if res.is_err() {
+            if let Some(alt) = meta::cover_fallback(&release, token.as_deref()) {
+                res = meta::download_cover(&alt);
+            }
+        }
+        let _ = tx.send((key_for_thread, res));
+    });
+}
+
+fn show_cover(ui: &Rc<Ui>, path: &Path) {
+    ui.cover_picture.set_filename(Some(path));
+    ui.cover_picture.set_visible(true);
+    ui.cover_placeholder.set_visible(false);
+    ui.cover_btn.set_sensitive(true);
+}
+
+fn show_cover_placeholder(ui: &Rc<Ui>, text: &str) {
+    ui.cover_placeholder.set_text(text);
+    ui.cover_placeholder.set_visible(true);
+    ui.cover_picture.set_visible(false);
+    ui.cover_btn.set_sensitive(true);
 }
 
 fn candidate_label(r: &MetaRelease) -> String {
@@ -2007,16 +2128,22 @@ fn apply_meta(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
         return;
     };
     let root = state.borrow().settings.output.root.clone();
+    let cached_cover = ui.cover_cache.borrow().clone();
     ui.meta_status.set_text(&tr("写入标签中…"));
     ui.meta_apply_btn.set_sensitive(false);
     let (tx, rx) = mpsc::channel();
     *ui.meta_rx.borrow_mut() = Some(rx);
     std::thread::spawn(move || {
         let files = tag::flac_files(&dir);
-        let cover = release
-            .cover_url
-            .as_deref()
-            .and_then(|u| meta::download_cover(u).ok());
+        // 优先复用界面上已经下载好的封面（包括 Discogs 兜底那张）
+        let key = format!("{}:{}", release.source.as_str(), release.id);
+        let cover = match &cached_cover {
+            Some((cached_key, path)) if cached_key == &key && path.exists() => Some(path.clone()),
+            _ => release
+                .cover_url
+                .as_deref()
+                .and_then(|u| meta::download_cover(u).ok()),
+        };
         let out = match tag::apply(&files, &release, &root, (1, 1), cover.as_deref()) {
             Ok(d) => MetaOutcome::Applied(d),
             Err(e) => MetaOutcome::ApplyFailed(format!("{e:#}")),
@@ -2029,6 +2156,28 @@ fn start_meta_pump(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
     let ui2 = ui.clone();
     let st = state.clone();
     glib::timeout_add_local(Duration::from_millis(200), move || {
+        // 封面下载结果
+        let cover = {
+            let rx = ui2.cover_rx.borrow();
+            rx.as_ref().and_then(|r| r.try_recv().ok())
+        };
+        if let Some((key, res)) = cover {
+            match res {
+                Ok(path) => {
+                    if std::env::var("CYANRIP_GUI_DEBUG").as_deref() == Ok("1") {
+                        let size = std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
+                        eprintln!("COVER key={key} bytes={size}");
+                    }
+                    *ui2.cover_cache.borrow_mut() = Some((key, path.clone()));
+                    show_cover(&ui2, &path);
+                }
+                Err(e) => {
+                    show_cover_placeholder(&ui2, &tr("封面下载失败"));
+                    ui2.toast
+                        .add_toast(adw::Toast::new(&format!("{}: {e}", tr("封面下载失败"))));
+                }
+            }
+        }
         let msg = {
             let rx = ui2.meta_rx.borrow();
             rx.as_ref().and_then(|r| r.try_recv().ok())
@@ -2104,6 +2253,7 @@ fn start_meta_pump(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
                         ui2.meta_dropdown.set_selected(0);
                         ui2.meta_apply_btn.set_sensitive(has_dir);
                         refresh_disc(&ui2, &st);
+                        request_cover(&ui2, &st, false);
                         if std::env::var("CYANRIP_GUI_AUTOAPPLY").as_deref() == Ok("1")
                             && st.borrow().phase == Phase::Done
                         {

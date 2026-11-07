@@ -134,6 +134,16 @@ pub fn discogs_token() -> Option<String> {
         .filter(|s| !s.is_empty())
 }
 
+/// 为候选找封面：先用它自己的 URL，失败再查 Discogs（条码/目录号/艺人+专辑）。
+pub fn cover_fallback(release: &MetaRelease, token: Option<&str>) -> Option<String> {
+    discogs::find_cover(
+        release.barcode.as_deref(),
+        release.catno.as_deref(),
+        &format!("{} {}", release.artist, release.title),
+        token,
+    )
+}
+
 /// 下载封面到临时文件，返回路径。
 pub fn download_cover(url: &str) -> anyhow::Result<PathBuf> {
     let resp = ureq::get(url).set("User-Agent", UA).call()?;
