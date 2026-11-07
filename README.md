@@ -22,7 +22,7 @@ crates/cyanrip-gui/    # GTK4 + libadwaita 前端（碟片 / 进度 / 结果 / �
 
 ```bash
 cargo build
-cargo test          # 22 个单测 + 2 个流式/取消集成测试，全部离线
+cargo test          # 32 个单测 + 2 个流式/取消集成测试，全部离线
 ```
 
 ## 启动 GUI
@@ -37,6 +37,7 @@ cargo build --release -p cyanrip-gui && ./target/release/cyanrip-frontend
 界面：顶部切换「碟片 / 进度 / 结果 / 设置」。
 
 - **碟片**：设备下拉（带型号，切换即探测）、重新扫描、探测、弹出、读偏移 + 测定偏移、全选/取消全选、逐轨勾选；换碟后 1.5s 内自动刷新列表
+- **抓轨前识别**：探测成功即查 MusicBrainz / Discogs（用 Disc ID + MCN，不需要音频），曲目表直接显示真实曲名；候选下拉可切换压片版本，选中的元数据随 `-a`/`-t` 传给 cyanrip，目录名与文件名一次到位
 - **进度**：双进度条 + 终端风格单行状态（`Ripping track 5, progress - 47.32%, ETA - 2m · 2.3x · 已用 12:40`）；日志只保留真实输出行
 - **结果**：结论句 + 概览（设备/偏移/C2/AR ID/错误数…）+ 逐轨 EAC CRC32 / AR v1 / AR v2 / confidence / 状态表
 - **结果页「元数据」**：抓轨后自动识别（MusicBrainz → Discogs 条码/MCN → AcoustID），下拉选候选后「写入标签」，自动归档到 `艺人/专辑/` 并写 FLAC 标签
