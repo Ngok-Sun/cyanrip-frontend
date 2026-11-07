@@ -26,8 +26,9 @@
           stroke-width="1.6"/>
 
   <!-- RIP：叠在盘面下半部 -->
-  <text x="64" y="92" text-anchor="middle"
+  <text x="64" y="110" text-anchor="middle"
         font-family="DejaVu Sans, Liberation Sans, Cantarell, sans-serif"
-        font-size="26" font-weight="bold" letter-spacing="2"
-        fill="#55595e">RIP</text>
+        font-size="38" font-weight="bold" letter-spacing="1.5"
+        fill="#55595e" stroke="#ffffff" stroke-width="2.5"
+        paint-order="stroke fill">RIP</text>
 </svg>
