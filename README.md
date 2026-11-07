@@ -1,5 +1,9 @@
 # cyanrip-frontend
 
+[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/Ngok-Sun/cyanrip-frontend)](https://github.com/Ngok-Sun/cyanrip-frontend/releases)
+[![Rust](https://img.shields.io/badge/rust-stable-orange.svg)](https://www.rust-lang.org/)
+
 cyanrip 的原生 GTK4 前端（Rust）。**中文** · [English](README.en.md)
 
 设计文档见 [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)。

@@ -1,5 +1,9 @@
 # cyanrip-frontend
 
+[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/Ngok-Sun/cyanrip-frontend)](https://github.com/Ngok-Sun/cyanrip-frontend/releases)
+[![Rust](https://img.shields.io/badge/rust-stable-orange.svg)](https://www.rust-lang.org/)
+
 A native GTK4 / libadwaita frontend for [cyanrip](https://github.com/cyanreg/cyanrip), written in Rust.
 
 **English** · [中文](README.md)
