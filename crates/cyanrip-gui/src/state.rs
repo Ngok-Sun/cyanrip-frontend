@@ -1,6 +1,6 @@
 //! GUI 的应用状态。UI 单线程，用 `Rc<RefCell<AppState>>` 共享。
 
-use cyanrip_core::config::Settings;
+use cyanrip_core::config::{Secrets, Settings};
 use cyanrip_core::event::Event;
 use cyanrip_core::meta::MetaRelease;
 use cyanrip_core::model::{DiscInfo, ProgressUpdate, RipReport};
@@ -20,6 +20,9 @@ pub enum Phase {
 pub struct AppState {
     pub settings: Settings,
     pub config_path: PathBuf,
+    /// 密钥（Discogs token）单独存 secrets.toml（0600）
+    pub secrets: Secrets,
+    pub secrets_path: PathBuf,
     pub device: String,
     pub disc: Option<DiscInfo>,
     /// 与 `disc.audio_tracks()` 一一对应
@@ -55,6 +58,20 @@ impl AppState {
             .filter(|p| !p.trim().is_empty())
             .map(PathBuf::from)
             .unwrap_or_else(Settings::default_path);
+        let secrets_path = Secrets::path_for(&config_path);
+        let mut secrets = Secrets::load(&secrets_path);
+        if secrets.discogs_token.trim().is_empty() {
+            // 迁移旧位置：~/.config/discogs/token（只回填到界面，点保存才写入 secrets.toml）
+            if let Ok(home) = std::env::var("HOME") {
+                let legacy = PathBuf::from(home).join(".config/discogs/token");
+                if let Ok(text) = std::fs::read_to_string(legacy) {
+                    let text = text.trim().to_string();
+                    if !text.is_empty() {
+                        secrets.discogs_token = text;
+                    }
+                }
+            }
+        }
         let mut settings = Settings::load(&config_path).unwrap_or_default();
         // 自测用：临时把输出根目录指到别处，避免污染真实音乐库
         let mut ephemeral_root = false;
@@ -68,6 +85,8 @@ impl AppState {
         Self {
             settings,
             config_path,
+            secrets,
+            secrets_path,
             device,
             disc: None,
             selected: Vec::new(),
@@ -94,6 +113,9 @@ impl AppState {
         }
         if let Err(e) = self.settings.save(&self.config_path) {
             eprintln!("保存配置失败：{e:#}");
+        }
+        if let Err(e) = self.secrets.save(&self.secrets_path) {
+            eprintln!("保存密钥失败：{e:#}");
         }
     }
 

@@ -106,6 +106,16 @@ pub fn track_durations(info: &crate::model::DiscInfo) -> Vec<Duration> {
     info.audio_tracks().map(|t| t.duration()).collect()
 }
 
+/// 带显式 token 的解析入口（界面把设置里的 token 传进来）。
+pub fn resolve_with(
+    info: &crate::model::DiscInfo,
+    first_audio_file: Option<&Path>,
+    discogs_token: Option<&str>,
+) -> Vec<MetaRelease> {
+    discogs::set_token(discogs_token.map(|s| s.to_string()));
+    resolve(info, first_audio_file)
+}
+
 /// 读取 Discogs token：环境变量优先，其次 `~/.config/discogs/token`。
 pub fn discogs_token() -> Option<String> {
     if let Ok(t) = std::env::var("CYANRIP_DISCOGS_TOKEN") {

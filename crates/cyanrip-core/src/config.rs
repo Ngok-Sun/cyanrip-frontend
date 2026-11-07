@@ -111,6 +111,54 @@ fn dirs_music() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("~/Music"))
 }
 
+/// 需要保密的设置，单独存 `secrets.toml`（0600），不写进 config.toml
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
+pub struct Secrets {
+    #[serde(default)]
+    pub discogs_token: String,
+}
+
+impl Secrets {
+    /// `config.toml` → `secrets.toml`；其它 profile（如 second.toml）→ `second.secrets.toml`
+    pub fn path_for(config_path: &Path) -> PathBuf {
+        let stem = config_path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("config");
+        let name = if stem == "config" {
+            "secrets.toml".to_string()
+        } else {
+            format!("{stem}.secrets.toml")
+        };
+        config_path.with_file_name(name)
+    }
+
+    pub fn load(path: &Path) -> Self {
+        std::fs::read_to_string(path)
+            .ok()
+            .and_then(|s| toml::from_str(&s).ok())
+            .unwrap_or_default()
+    }
+
+    pub fn save(&self, path: &Path) -> Result<()> {
+        if let Some(dir) = path.parent() {
+            std::fs::create_dir_all(dir).ok();
+        }
+        let s = toml::to_string_pretty(self).context("密钥序列化失败")?;
+        let tmp = path.with_extension("toml.tmp");
+        std::fs::write(&tmp, s).context("写临时密钥文件失败")?;
+        // 先收紧权限再落位，避免短暂可读
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = std::fs::set_permissions(&tmp, std::fs::Permissions::from_mode(0o600));
+        }
+        std::fs::rename(&tmp, path).context("替换密钥文件失败")?;
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(default)]
 pub struct MetaSettings {

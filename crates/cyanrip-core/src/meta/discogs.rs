@@ -79,9 +79,28 @@ struct Image {
     kind: String,
 }
 
+/// 界面里设置的 token（由 `meta::resolve_with` 注入），优先于环境变量/旧文件
+static TOKEN_OVERRIDE: std::sync::OnceLock<std::sync::Mutex<Option<String>>> =
+    std::sync::OnceLock::new();
+
+pub fn set_token(token: Option<String>) {
+    let slot = TOKEN_OVERRIDE.get_or_init(|| std::sync::Mutex::new(None));
+    if let Ok(mut guard) = slot.lock() {
+        *guard = token;
+    }
+}
+
+fn effective_token() -> Option<String> {
+    TOKEN_OVERRIDE
+        .get()
+        .and_then(|m| m.lock().ok().and_then(|g| g.clone()))
+        .filter(|t| !t.trim().is_empty())
+        .or_else(discogs_token)
+}
+
 fn get_json<T: for<'de> Deserialize<'de>>(url: &str) -> Result<T> {
     let mut req = ureq::get(url).set("User-Agent", UA);
-    if let Some(token) = discogs_token() {
+    if let Some(token) = effective_token() {
         req = req.set("Authorization", &format!("Discogs token={token}"));
     }
     req.call()

@@ -26,6 +26,12 @@ fn main() -> glib::ExitCode {
         let state = Rc::new(RefCell::new(state::AppState::new()));
         // 登记本实例（多开时用于「抓完关机」互斥与调试）
         let lock = instance::register(&state.borrow().device);
+        if std::env::var("CYANRIP_GUI_DEBUG").as_deref() == Ok("1") {
+            eprintln!(
+                "SECRETS token_len={}",
+                state.borrow().secrets.discogs_token.len()
+            );
+        }
         if let Some(lock) = lock.clone() {
             let lock_for_exit = lock.clone();
             app.connect_shutdown(move |_| {
@@ -129,6 +135,10 @@ fn main() -> glib::ExitCode {
                 ui2.select_all.set_active(true);
                 let all_on = st2.borrow().selected.iter().all(|x| *x);
 
+                // Discogs token：改成掩码输入行，保存后应落到 secrets.toml（0600）
+                ui2.discogs_row.set_text("tok-test-123");
+                let token_dirty = st2.borrow().secrets.discogs_token == "tok-test-123";
+
                 let original = st2.borrow().settings.rip.verify_passes;
                 let initial_disabled = !ui2.save_btn.is_sensitive();
                 ui2.verify_spin.set_value((original + 1) as f64);
@@ -142,6 +152,22 @@ fn main() -> glib::ExitCode {
                 ui2.verify_spin.set_value(original as f64);
                 ui2.save_btn.emit_clicked();
                 let clean = !st2.borrow().dirty && !ui2.save_btn.is_sensitive();
+                let secrets_path = cyanrip_core::config::Secrets::path_for(&st2.borrow().config_path);
+                let token_saved = std::fs::read_to_string(&secrets_path)
+                    .map(|t| t.contains("tok-test-123"))
+                    .unwrap_or(false);
+                #[cfg(unix)]
+                let secrets_mode = {
+                    use std::os::unix::fs::PermissionsExt;
+                    std::fs::metadata(&secrets_path)
+                        .map(|m| format!("{:o}", m.permissions().mode() & 0o777))
+                        .unwrap_or_default()
+                };
+                #[cfg(not(unix))]
+                let secrets_mode = String::new();
+                let config_has_token = std::fs::read_to_string(&st2.borrow().config_path)
+                    .map(|c| c.contains("tok-test-123"))
+                    .unwrap_or(false);
 
                 // 「刷新」= 重扫设备 + 探测：同一张碟应该保持原样
                 let before = st2.borrow().disc.as_ref().map(|d| d.leadout_lsn);
@@ -186,7 +212,7 @@ fn main() -> glib::ExitCode {
                     .unwrap_or(false);
 
                 println!(
-                    "SELFTEST initial_disabled={initial_disabled} dirty={dirty} saved={saved} clean_after_save={clean} all_off={all_off} all_on={all_on} devices={devices} selected={sel_dev} refresh_ok={refresh_ok} eject_icon={icon_ok} eject_classes={eject_classes:?} refresh_classes={refresh_classes:?} theme_events={theme_events} theme_combo_ok={combo_ok} root_subtitle={root_subtitle:?} disc_after={after:?}"
+                    "SELFTEST initial_disabled={initial_disabled} dirty={dirty} saved={saved} clean_after_save={clean} all_off={all_off} all_on={all_on} devices={devices} selected={sel_dev} refresh_ok={refresh_ok} eject_icon={icon_ok} eject_classes={eject_classes:?} token_dirty={token_dirty} token_saved={token_saved} secrets_mode={secrets_mode} config_has_token={config_has_token} refresh_classes={refresh_classes:?} theme_events={theme_events} theme_combo_ok={combo_ok} root_subtitle={root_subtitle:?} disc_after={after:?}"
                 );
                 app2.quit();
                 glib::ControlFlow::Break

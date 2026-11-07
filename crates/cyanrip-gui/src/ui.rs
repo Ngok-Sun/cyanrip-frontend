@@ -76,6 +76,7 @@ pub struct Ui {
     pub root_row: adw::ActionRow,
     pub root_pick_btn: gtk::Button,
     pub bin_entry: adw::EntryRow,
+    pub discogs_row: adw::PasswordEntryRow,
     pub sound_switch: adw::SwitchRow,
     pub theme_combo: adw::ComboRow,
     pub theme_test_btn: gtk::Button,
@@ -289,6 +290,7 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
         root: root_row,
         root_pick: root_pick_btn,
         bin: bin_entry,
+        discogs: discogs_row,
         sound: sound_switch,
         theme: theme_combo,
         theme_test: theme_test_btn,
@@ -357,6 +359,7 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
         root_row,
         root_pick_btn,
         bin_entry,
+        discogs_row,
         sound_switch,
         theme_combo,
         theme_test_btn,
@@ -387,6 +390,7 @@ struct SettingsWidgets {
     root: adw::ActionRow,
     root_pick: gtk::Button,
     bin: adw::EntryRow,
+    discogs: adw::PasswordEntryRow,
     sound: adw::SwitchRow,
     theme: adw::ComboRow,
     theme_test: gtk::Button,
@@ -402,6 +406,7 @@ struct SettingsWidgets {
 fn build_settings_page(state: &Rc<RefCell<AppState>>) -> SettingsWidgets {
     let page = adw::PreferencesPage::new();
     let s = state.borrow().settings.clone();
+    let s_secrets = state.borrow().secrets.clone();
 
     // 设备与驱动
     let device_group = adw::PreferencesGroup::builder()
@@ -471,8 +476,15 @@ fn build_settings_page(state: &Rc<RefCell<AppState>>) -> SettingsWidgets {
     // 元数据（M3 才真正使用）
     let meta_group = adw::PreferencesGroup::builder()
         .title(tr("元数据"))
-        .description(tr("M3 实现：MusicBrainz → AcoustID → Discogs"))
+        .description(tr(
+            "MusicBrainz → AcoustID → Discogs；token 单独存 secrets.toml（0600）",
+        ))
         .build();
+    let discogs_row = adw::PasswordEntryRow::builder()
+        .title(tr("Discogs access token"))
+        .text(s_secrets.discogs_token.clone())
+        .build();
+    meta_group.add(&discogs_row);
 
     // 行为
     let behavior_group = adw::PreferencesGroup::builder().title(tr("行为")).build();
@@ -579,6 +591,7 @@ fn build_settings_page(state: &Rc<RefCell<AppState>>) -> SettingsWidgets {
         root: root_row,
         root_pick,
         bin: bin_entry,
+        discogs: discogs_row,
         sound: sound_switch,
         theme: theme_combo,
         theme_test,
@@ -805,6 +818,14 @@ fn connect_signals(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
     {
         let st = state.clone();
         let ui2 = ui.clone();
+        ui.discogs_row.connect_changed(move |e| {
+            st.borrow_mut().secrets.discogs_token = e.text().to_string();
+            mark_dirty(&ui2, &st);
+        });
+    }
+    {
+        let st = state.clone();
+        let ui2 = ui.clone();
         ui.bin_entry.connect_changed(move |e| {
             st.borrow_mut().settings.advanced.bin = e.text().to_string();
             mark_dirty(&ui2, &st);
@@ -923,6 +944,8 @@ fn refresh_settings_widgets(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
     ui.root_row
         .set_subtitle(&s.output.root.display().to_string());
     ui.bin_entry.set_text(&s.advanced.bin);
+    ui.discogs_row
+        .set_text(&state.borrow().secrets.discogs_token);
     ui.sound_switch.set_active(s.behavior.sound);
     let theme_idx = ui
         .sound_events
@@ -1826,6 +1849,15 @@ fn start_meta_resolve(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
         return;
     };
     let root = state.borrow().settings.output.root.clone();
+    let token = {
+        let st = state.borrow();
+        let t = st.secrets.discogs_token.trim().to_string();
+        if t.is_empty() {
+            None
+        } else {
+            Some(t)
+        }
+    };
     ui.meta_label.set_text(&tr("识别中…"));
     ui.meta_status.set_text(&tr("识别中…"));
     ui.meta_apply_btn.set_sensitive(false);
@@ -1860,7 +1892,7 @@ fn start_meta_resolve(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
             let _ = tx.send(MetaOutcome::Candidates(vec![release], dir));
             return;
         }
-        let out = meta::resolve(&disc, files.first().map(|p| p.as_path()));
+        let out = meta::resolve_with(&disc, files.first().map(|p| p.as_path()), token.as_deref());
         let _ = tx.send(MetaOutcome::Candidates(out, dir));
     });
 }
