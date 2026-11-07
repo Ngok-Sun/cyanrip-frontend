@@ -84,6 +84,9 @@ pub fn apply(
     std::fs::create_dir_all(&dest_dir)
         .with_context(|| format!("创建目录失败：{}", dest_dir.display()))?;
 
+    // 先算好全部目标路径并做冲突检查，避免搬到一半才发现重名、留下半套归档
+    let mut plan: Vec<(PathBuf, PathBuf, String, u32)> = Vec::with_capacity(files.len());
+    let mut seen: std::collections::HashSet<PathBuf> = std::collections::HashSet::new();
     for (i, src) in files.iter().enumerate() {
         let meta = release.tracks.get(i);
         let title = meta
@@ -98,9 +101,11 @@ pub fn apply(
         };
         let prefix = crate::template::disc_prefix(&tpl.file_template, disc.0, disc.1);
         let stem = crate::template::render(&tpl.file_template, &file_ctx);
-        let name = format!("{prefix}{stem}.flac");
-        let dest = dest_dir.join(&name);
+        let dest = dest_dir.join(format!("{prefix}{stem}.flac"));
 
+        if !seen.insert(dest.clone()) {
+            bail!("模板产生了重名文件：{}", dest.display());
+        }
         if src != &dest {
             if dest.exists() {
                 bail!("目标文件已存在：{}", dest.display());
@@ -109,10 +114,14 @@ pub fn apply(
             if !is_complete_flac(src) {
                 bail!("文件不完整（可能还在写入）：{}", src.display());
             }
-            if std::fs::rename(src, &dest).is_err() {
-                std::fs::copy(src, &dest).context("复制文件失败")?;
-                std::fs::remove_file(src).ok();
-            }
+        }
+        plan.push((src.clone(), dest, title, number));
+    }
+
+    for (src, dest, title, number) in plan {
+        if src != dest && std::fs::rename(&src, &dest).is_err() {
+            std::fs::copy(&src, &dest).context("复制文件失败")?;
+            std::fs::remove_file(&src).ok();
         }
 
         let track_total = if release.tracks.is_empty() {

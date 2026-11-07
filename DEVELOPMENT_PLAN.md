@@ -863,6 +863,25 @@ AccurateRip 数据库中有这张碟 · 001333f2-00bfe5ad-9909b20d
 | 翻译同步 | `po/update.sh`：xgettext → msgmerge → msgfmt → 装到 `~/.local/share/locale` | 英文界面下标题 "Interface language" / 副标题 "Takes effect after restarting the app" |
 | 全量英文 | 153 条 msgid 全部翻译（含进度/结果/错误/表格列名、设置页分组标题/副标题） | `i18n_coverage` 测试 + 运行时 `gettext` 校验：中文残留 0 |
 
+### M4 — 完工前代码审查（2026-11-08）
+
+通读 core + GUI 约 7.8k 行，修掉 8 个真实缺陷：
+
+| # | 位置 | 问题 | 修法 |
+|---|---|---|---|
+| 1 | `rip.rs` | `cancel.changed()` 返回 `Err`（窗口关闭丢弃 sender）时 `select!` 立即再次触发，空转吃满一个核 | `Err(_) => break` |
+| 2 | `state.rs::append_log` | 按字节截断日志，切点落在多字节字符中间时 `[cut..]` panic（曲名/路径常见） | 对齐 `is_char_boundary` 再找换行；新增单测 |
+| 3 | `state.rs::offset` | 未知光驱时借用 `offsets.values().next()`，可能拿另一台光驱的 +500 去抓 +48 的碟 | 未知返回 0 |
+| 4 | `ui.rs` 偏移 Spin | 程序化 `set_value(0)` 触发 handler，把「未知」写进配置并保存，覆盖「未知不落盘」的约定 | 加 `syncing_offset` 守卫 |
+| 5 | `meta/*` | ureq 没有超时，网络卡住时识别线程永久挂起 | 统一 `agent()`：连接 8s / 读 20s / 总 30s |
+| 6 | `download_cover` | 无限读入内存；临时文件名只用 PID，换候选会覆盖上一张 | 12 MiB 上限 + URL 哈希文件名 |
+| 7 | `tag::apply` | 目标重名在搬运中途才报错，留下半套归档 | 先算全量目标路径、查重/查冲突，再统一搬 |
+| 8 | `ui.rs` 关机开关 | 副标题声称「二次确认」，实际没有 | 打开时弹确认框，取消则回弹开关 |
+
+另外两处修正：
+- 全碟进度按**实际勾选的轨**折算（之前勾 1 轨只走到 ~8% 就到头）
+- AccurateRip：v2 未命中不再抹掉 v1 的精确命中；v1 也记录 confidence
+
 ### M4 — 剩余工作
 
 - `-S` 速度档位接线（或从设置里移除）
@@ -906,6 +925,7 @@ CYANRIP_GUI_STANDALONE=1 CYANRIP_GUI_SELFTEST=1 ./target/debug/cyanrip-frontend
 
 | commit | 日期 | 说明 |
 |---|---|---|
+| `0b049b5` | 11-08 | i18n: translate hardcoded 轨 unit and remaining literals |
 | `1f47e2f` | 11-08 | i18n: extract trm() strings (-ktrm) so settings group titles translate |
 | `15acdb7` | 11-08 | i18n: complete English translations (143 msgids) + coverage test |
 | `769f252` | 11-08 | i18n: translate new language settings; add po/update.sh |
@@ -959,4 +979,4 @@ CYANRIP_GUI_STANDALONE=1 CYANRIP_GUI_SELFTEST=1 ./target/debug/cyanrip-frontend
 | `47ae591` | 11-07 | M1 verified on real disc: fix CDROMREADTOCHDR ioctl, monotonic multi-pass progress, sane speed/ETA |
 | `cd8423a` | 11-07 | M1: cyanrip-core + cyanrip-cli (TOC probe, progress/log parsing, rip orchestration) |
 
-> 功能验收记录见 §15，踩坑见 §14.1；本文档最后一次整体校对：2026-11-07（与 HEAD 对齐）。
+> 功能验收记录见 §15，踩坑见 §14.1；本文档最后一次整体校对：2026-11-08（与 HEAD 对齐）。

@@ -33,6 +33,8 @@ pub struct RipOptions {
     pub log_path: Option<PathBuf>,
     /// 子进程工作目录（cyanrip 会把输出建在 CWD 下）
     pub cwd: Option<PathBuf>,
+    /// 本次实际抓取的轨号；空 = 全部音轨（用于全碟进度折算）
+    pub selected: Vec<u32>,
 }
 
 impl RipOptions {
@@ -44,6 +46,7 @@ impl RipOptions {
             extra_args: Vec::new(),
             log_path: None,
             cwd: None,
+            selected: Vec::new(),
         }
     }
 
@@ -184,7 +187,7 @@ pub async fn run(
     drop(line_tx);
 
     let passes = verify_passes_from_args(&opts.extra_args);
-    let mut tracker = ProgressTracker::with_passes(disc, passes);
+    let mut tracker = ProgressTracker::with_selection(disc, passes, &opts.selected);
     let mut captured = String::new();
     let mut last_emit = Instant::now() - PROGRESS_THROTTLE;
     let mut current_track = 0u32;
@@ -194,10 +197,15 @@ pub async fn run(
         tokio::select! {
             biased;
             changed = cancel.changed() => {
-                if changed.is_ok() && *cancel.borrow() {
-                    cancelled = true;
-                    let _ = child.kill().await;
-                    break;
+                match changed {
+                    Ok(()) if *cancel.borrow() => {
+                        cancelled = true;
+                        let _ = child.kill().await;
+                        break;
+                    }
+                    Ok(()) => {}
+                    // 发送端被丢弃（窗口关闭等）：别再等，直接收尾
+                    Err(_) => break,
                 }
             }
             line = line_rx.recv() => {

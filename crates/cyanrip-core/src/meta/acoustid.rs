@@ -68,7 +68,8 @@ pub fn identify(file: &Path) -> Result<AcoustIdMatch> {
         fp.duration as u64,
         urlencode(&fp.fingerprint)
     );
-    let resp: Resp = ureq::post("https://api.acoustid.org/v2/lookup")
+    let resp: Resp = super::agent()
+        .post("https://api.acoustid.org/v2/lookup")
         .set("Content-Type", "application/x-www-form-urlencoded")
         .send_string(&body)
         .context("AcoustID 请求失败")?

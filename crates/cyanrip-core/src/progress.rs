@@ -90,6 +90,8 @@ pub struct ProgressTracker {
     /// 倍速的滚动采样（抓轨开始后的时长, 已读帧）
     speed_sample: Option<(Duration, u64)>,
     speed_x: Option<f32>,
+    /// 只抓部分轨时，全碟进度要按这些轨折算；空 = 全部音轨
+    selected: Vec<u32>,
 }
 
 impl ProgressTracker {
@@ -99,8 +101,22 @@ impl ProgressTracker {
 
     /// `verify_passes` 对应 cyanrip 的 `-Z`：每轨至少读 `verify_passes + 1` 遍。
     pub fn with_passes(disc: &DiscInfo, verify_passes: u8) -> Self {
+        Self::with_selection(disc, verify_passes, &[])
+    }
+
+    /// `selected` 为本次实际要抓的轨号；空表示全部音轨。
+    pub fn with_selection(disc: &DiscInfo, verify_passes: u8, selected: &[u32]) -> Self {
         let tracks: Vec<TrackInfo> = disc.audio_tracks().cloned().collect();
-        let total_frames = tracks.iter().map(|t| t.duration_frames as u64).sum();
+        let sel: Vec<u32> = if selected.is_empty() {
+            tracks.iter().map(|t| t.number).collect()
+        } else {
+            selected.to_vec()
+        };
+        let total_frames = tracks
+            .iter()
+            .filter(|t| sel.contains(&t.number))
+            .map(|t| t.duration_frames as u64)
+            .sum();
         Self {
             tracks,
             total_frames,
@@ -112,6 +128,7 @@ impl ProgressTracker {
             last_overall: 0.0,
             speed_sample: None,
             speed_x: None,
+            selected: sel,
         }
     }
 
@@ -138,6 +155,7 @@ impl ProgressTracker {
         let idx = self.index_of(line.track).unwrap_or(0);
         let before: u64 = self.tracks[..idx]
             .iter()
+            .filter(|t| self.selected.contains(&t.number))
             .map(|t| t.duration_frames as u64)
             .sum();
         let cur = self
@@ -276,6 +294,24 @@ mod tests {
         });
         // 已完成 1000 + 本轨 1500 = 2500 / 4000 = 62.5%
         assert!((u.overall_pct - 62.5).abs() < 0.01, "got {}", u.overall_pct);
+    }
+
+    #[test]
+    fn partial_selection_uses_selected_total() {
+        // 只抓第 3 轨：全碟 4 轨，进度应按第 3 轨自身折算，而不是卡在 25%
+        let disc = disc_with(&[(1, 1000), (2, 1000), (3, 2000), (4, 1000)]);
+        let mut t = ProgressTracker::with_selection(&disc, 0, &[3]);
+        let u = t.update(&ProgressLine {
+            track: 3,
+            percent: 100.0,
+            eta: None,
+            errors: 0,
+        });
+        assert!(
+            (u.overall_pct - 100.0).abs() < 0.01,
+            "got {}",
+            u.overall_pct
+        );
     }
 
     #[test]

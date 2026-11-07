@@ -86,6 +86,7 @@ async fn streams_events_and_parses_report() {
         extra_args: vec!["-Z".into(), "2".into()],
         log_path: None,
         cwd: None,
+        selected: Vec::new(),
     };
 
     let report = run(opts, &disc, tx, cancel_rx)
@@ -165,6 +166,7 @@ async fn cancellation_stops_child() {
         extra_args: vec![],
         log_path: None,
         cwd: None,
+        selected: Vec::new(),
     };
 
     let handle = tokio::spawn(async move { run(opts, &disc, tx, cancel_rx).await });

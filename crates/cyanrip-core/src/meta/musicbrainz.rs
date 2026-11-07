@@ -1,6 +1,6 @@
 //! MusicBrainz：按 Disc ID 查发行版。
 
-use super::{MetaRelease, MetaSource, MetaTrack, UA};
+use super::{MetaRelease, MetaSource, MetaTrack};
 use anyhow::{Context, Result};
 use serde::Deserialize;
 use std::time::Duration;
@@ -73,8 +73,8 @@ pub fn lookup_discid(discid: &str, track_count: usize) -> Result<Vec<MetaRelease
     let url = format!(
         "https://musicbrainz.org/ws/2/discid/{discid}?inc=artists+labels+recordings&fmt=json"
     );
-    let resp: Resp = ureq::get(&url)
-        .set("User-Agent", UA)
+    let resp: Resp = super::agent()
+        .get(&url)
         .call()
         .with_context(|| format!("MusicBrainz 查询失败：{discid}"))?
         .into_json()

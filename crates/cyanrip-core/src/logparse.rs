@@ -181,14 +181,23 @@ pub fn parse_log(text: &str) -> RipReport {
                 if t.ar_state == ArState::Unknown {
                     t.ar_state = ar_state_of(st.as_str());
                 }
+                if let Some(cf) = confidence_of(st.as_str()) {
+                    t.ar_confidence = Some(cf);
+                }
             }
             continue;
         }
         if let Some(c) = re_ar_v2().captures(line) {
             t.ar_v2 = c.get(1).and_then(|m| hex32(m.as_str()));
             if let Some(st) = c.get(2) {
-                t.ar_state = ar_state_of(st.as_str());
-                t.ar_confidence = confidence_of(st.as_str());
+                let state = ar_state_of(st.as_str());
+                // v2 未入库不该抹掉 v1 的精确命中（老压片常见）
+                if state == ArState::Accurate || t.ar_state == ArState::Unknown {
+                    t.ar_state = state;
+                }
+                if let Some(cf) = confidence_of(st.as_str()) {
+                    t.ar_confidence = Some(cf);
+                }
             }
             continue;
         }
@@ -204,6 +213,22 @@ pub fn parse_log(text: &str) -> RipReport {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn v2_not_found_keeps_v1_accurate() {
+        let log = [
+            "Disc tracks:    1",
+            "Track 1 ripped and encoded successfully!",
+            "  EAC CRC32:     971CD8BF",
+            "  Accurip v1:    971CD8BF (accurately ripped, confidence 5)",
+            "  Accurip v2:    056580F7 (not found, either a new pressing, or bad rip)",
+        ]
+        .join("\n");
+        let r = parse_log(&log);
+        let t = r.track(1).expect("track 1");
+        assert_eq!(t.ar_state, ArState::Accurate, "v1 命中应保留");
+        assert_eq!(t.ar_confidence, Some(5));
+    }
 
     const QUARTET: &str = include_str!("../tests/fixtures/log_quartet.txt");
     const FLOWER_CD1: &str = include_str!("../tests/fixtures/log_flower_cd1.txt");

@@ -45,8 +45,8 @@ pub fn search_image(query: &str, api_key: &str, cx: &str) -> Result<Option<Strin
         urlencode(cx),
         urlencode(query)
     );
-    let resp: Resp = ureq::get(&url)
-        .set("User-Agent", super::UA)
+    let resp: Resp = super::agent()
+        .get(&url)
         .call()
         .with_context(|| "Google 图片搜索失败".to_string())?
         .into_json()

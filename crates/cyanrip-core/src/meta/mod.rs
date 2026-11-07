@@ -8,12 +8,27 @@ pub mod google;
 pub mod musicbrainz;
 
 use serde::{Deserialize, Serialize};
+use std::io::Read as _;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 pub use discid::disc_id;
 
 pub const UA: &str = "cyanrip-frontend/0.1 ( https://github.com/cyanrip-frontend )";
+
+/// 所有网络请求共用的 agent：必须设超时，否则网络卡住会把识别线程永久挂起。
+pub fn agent() -> &'static ureq::Agent {
+    static A: std::sync::OnceLock<ureq::Agent> = std::sync::OnceLock::new();
+    A.get_or_init(|| {
+        ureq::AgentBuilder::new()
+            .user_agent(UA)
+            .timeout_connect(Duration::from_secs(8))
+            .timeout_read(Duration::from_secs(20))
+            .timeout_write(Duration::from_secs(10))
+            .timeout(Duration::from_secs(30))
+            .build()
+    })
+}
 
 /// 元数据来源
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -161,10 +176,26 @@ pub fn cover_fallback(release: &MetaRelease, token: Option<&str>) -> Option<Stri
 
 /// 下载封面到临时文件，返回路径。
 pub fn download_cover(url: &str) -> anyhow::Result<PathBuf> {
-    let resp = ureq::get(url).set("User-Agent", UA).call()?;
+    use std::hash::{Hash, Hasher};
+    const MAX_BYTES: u64 = 12 * 1024 * 1024;
+
+    let resp = agent().get(url).call()?;
     let mut bytes = Vec::new();
-    resp.into_reader().read_to_end(&mut bytes)?;
-    let path = std::env::temp_dir().join(format!("cyanrip-cover-{}.jpg", std::process::id()));
+    // 上限保护：避免坏 URL 把内存吃满
+    let reader = resp.into_reader();
+    let mut limited = std::io::Read::take(reader, MAX_BYTES);
+    limited.read_to_end(&mut bytes)?;
+    if bytes.is_empty() {
+        anyhow::bail!("封面为空：{url}");
+    }
+    // 文件名带上 URL 哈希：同一进程里换候选时不会覆盖上一张
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    url.hash(&mut h);
+    let path = std::env::temp_dir().join(format!(
+        "cyanrip-cover-{}-{:x}.jpg",
+        std::process::id(),
+        h.finish()
+    ));
     std::fs::write(&path, &bytes)?;
     Ok(path)
 }

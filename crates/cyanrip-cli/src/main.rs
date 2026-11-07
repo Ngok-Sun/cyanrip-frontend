@@ -276,6 +276,7 @@ fn rip_cmd(args: &[String]) -> Result<()> {
             extra_args: extra,
             log_path,
             cwd: None,
+            selected: Vec::new(),
         };
 
         let consumer = tokio::spawn(async move {

@@ -132,20 +132,20 @@ impl AppState {
         }
     }
 
-    /// 该光驱型号记住的偏移（没有则用设置里的默认）
+    /// 该光驱型号记住的偏移；未测定时返回 0，**不能**借用别的光驱的值。
     pub fn offset(&self) -> i32 {
         self.disc
             .as_ref()
             .and_then(|d| self.settings.offset_for(&d.model))
-            .unwrap_or(
-                self.settings
-                    .device
-                    .offsets
-                    .values()
-                    .next()
-                    .copied()
-                    .unwrap_or(0),
-            )
+            .unwrap_or(0)
+    }
+
+    /// 当前光驱是否已测定过偏移
+    pub fn offset_known(&self) -> bool {
+        self.disc
+            .as_ref()
+            .map(|d| self.settings.offset_for(&d.model).is_some())
+            .unwrap_or(false)
     }
 
     /// 选中第 `idx` 个候选，并刷新每轨标题
@@ -165,12 +165,41 @@ impl AppState {
     pub fn append_log(&mut self, line: &str) {
         self.log_text.push_str(line);
         self.log_text.push('\n');
-        // 日志面板不需要无限增长
-        if self.log_text.len() > 512 * 1024 {
-            let cut = self.log_text.len() - 256 * 1024;
-            if let Some(pos) = self.log_text[cut..].find('\n') {
-                self.log_text.drain(..cut + pos + 1);
-            }
+        trim_log_tail(&mut self.log_text, 512 * 1024, 256 * 1024);
+    }
+}
+
+/// 日志超过 `max` 字节时，从中间砍掉一段，只保留后半部分。
+/// 截断点必须落在 UTF-8 字符边界上（曲名/路径里多字节字符很常见）。
+fn trim_log_tail(text: &mut String, max: usize, keep: usize) {
+    if text.len() <= max {
+        return;
+    }
+    let mut cut = text.len() - keep;
+    while cut < text.len() && !text.is_char_boundary(cut) {
+        cut += 1;
+    }
+    if let Some(pos) = text[cut..].find('\n') {
+        text.drain(..cut + pos + 1);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn trims_log_on_char_boundary() {
+        // 大量三字节字符：按字节截断很容易落在字符中间
+        let mut s = String::new();
+        for i in 0..40_000 {
+            s.push_str(&format!("第{i}轨：久石譲 Quartet\n"));
         }
+        let before = s.len();
+        trim_log_tail(&mut s, 512 * 1024, 256 * 1024);
+        assert!(s.len() < before);
+        assert!(s.len() <= 512 * 1024);
+        // 仍然可以正常按行切分（说明边界对齐了）
+        assert!(s.lines().all(|l| l.contains('轨')));
     }
 }

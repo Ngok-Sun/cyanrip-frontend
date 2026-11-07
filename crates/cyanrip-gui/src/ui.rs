@@ -55,6 +55,8 @@ pub struct Ui {
     pub rescan_btn: gtk::Button,
     pub eject_btn: gtk::Button,
     pub syncing_device: RefCell<bool>,
+    pub syncing_offset: RefCell<bool>,
+    pub syncing_shutdown: RefCell<bool>,
     pub last_media: RefCell<cyanrip_core::disc::MediaStatus>,
     pub detect_btn: gtk::Button,
     pub offset_spin: gtk::SpinButton,
@@ -439,6 +441,8 @@ pub fn build(app: &adw::Application, state: Rc<RefCell<AppState>>) -> Rc<Ui> {
         rescan_btn,
         eject_btn,
         syncing_device: RefCell::new(false),
+        syncing_offset: RefCell::new(false),
+        syncing_shutdown: RefCell::new(false),
         last_media: RefCell::new(cyanrip_core::disc::MediaStatus::Unknown),
         detect_btn,
         offset_spin,
@@ -839,6 +843,9 @@ fn connect_signals(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
         let ui2 = ui.clone();
         let mh = model_holder.clone();
         ui.offset_spin.connect_value_changed(move |spin| {
+            if *ui2.syncing_offset.borrow() {
+                return;
+            }
             let mut s = st.borrow_mut();
             if let Some(d) = &s.disc {
                 let model = d.model.clone();
@@ -1189,8 +1196,37 @@ fn connect_signals(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
         let st = state.clone();
         let ui2 = ui.clone();
         ui.shutdown_switch.connect_active_notify(move |w| {
-            st.borrow_mut().settings.behavior.shutdown_when_done = w.is_active();
-            mark_dirty(&ui2, &st);
+            if *ui2.syncing_shutdown.borrow() {
+                return;
+            }
+            if !w.is_active() {
+                st.borrow_mut().settings.behavior.shutdown_when_done = false;
+                mark_dirty(&ui2, &st);
+                return;
+            }
+            // 打开前二次确认（关机是不可逆操作）
+            let dialog = adw::AlertDialog::builder()
+                .heading(tr("抓轨完成后自动关机？"))
+                .body(tr("会等所有前端实例都结束抓轨后再关机。"))
+                .build();
+            dialog.add_response("cancel", &tr("取消"));
+            dialog.add_response("ok", &tr("开启"));
+            dialog.set_default_response(Some("cancel"));
+            dialog.set_close_response("cancel");
+            let w2 = w.clone();
+            let ui3 = ui2.clone();
+            let st2 = st.clone();
+            dialog.connect_response(None, move |_, resp| {
+                if resp == "ok" {
+                    st2.borrow_mut().settings.behavior.shutdown_when_done = true;
+                    mark_dirty(&ui3, &st2);
+                } else {
+                    *ui3.syncing_shutdown.borrow_mut() = true;
+                    w2.set_active(false);
+                    *ui3.syncing_shutdown.borrow_mut() = false;
+                }
+            });
+            dialog.present(Some(&ui2.window));
         });
     }
     // 保存
@@ -1310,7 +1346,9 @@ pub fn probe_disc(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
             }
             st.disc = Some(info);
             drop(st);
+            *ui.syncing_offset.borrow_mut() = true;
             ui.offset_spin.set_value(offset as f64);
+            *ui.syncing_offset.borrow_mut() = false;
             refresh_disc(ui, state);
             sync_select_all(ui, state);
             ui.start_btn.set_sensitive(true);
@@ -1557,6 +1595,11 @@ pub fn start_rip(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
         eprintln!("RIP selected={selected:?} args={args:?}");
     }
     let offset = st.offset();
+    if !st.offset_known() {
+        ui.toast.add_toast(adw::Toast::new(&tr(
+            "该光驱还没测定读偏移，本次按 0 抓轨（建议先点「测定偏移」）",
+        )));
+    }
     let root = st.settings.output.root.clone();
     let bin = PathBuf::from(&st.settings.advanced.bin);
 
@@ -1569,6 +1612,7 @@ pub fn start_rip(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) {
         extra_args: args,
         log_path: None,
         cwd: Some(root.clone()),
+        selected: selected.clone(),
     };
     spawn_worker(opts, info, tx, cancel_rx);
 
@@ -1774,7 +1818,9 @@ fn auto_probe_disc(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>) -> bool {
         st.disc = Some(info);
         (off, !same)
     };
+    *ui.syncing_offset.borrow_mut() = true;
     ui.offset_spin.set_value(offset as f64);
+    *ui.syncing_offset.borrow_mut() = false;
     if changed {
         ui.hdcd_check.set_active(false);
     }
@@ -1867,6 +1913,12 @@ fn handle_event(ui: &Rc<Ui>, state: &Rc<RefCell<AppState>>, ev: Event) {
         Event::RipFinished { report, .. } => {
             let settings = {
                 let mut st = state.borrow_mut();
+                if std::env::var("CYANRIP_GUI_DEBUG").as_deref() == Ok("1") {
+                    eprintln!(
+                        "RIP progress_last={:?}",
+                        st.progress.as_ref().map(|p| p.overall_pct)
+                    );
+                }
                 st.phase = Phase::Done;
                 st.report = Some(report.clone());
                 st.events = None;

@@ -1,6 +1,6 @@
 //! Discogs：按条码搜索、读取发行版与曲目表。
 
-use super::{discogs_token, MetaRelease, MetaSource, MetaTrack, UA};
+use super::{discogs_token, MetaRelease, MetaSource, MetaTrack};
 use anyhow::{Context, Result};
 use serde::Deserialize;
 use std::time::Duration;
@@ -100,7 +100,7 @@ fn effective_token() -> Option<String> {
 
 fn get_json<T: for<'de> Deserialize<'de>>(url: &str) -> Result<T> {
     let token = effective_token();
-    let mut req = ureq::get(url).set("User-Agent", UA);
+    let mut req = super::agent().get(url);
     if let Some(t) = token.as_deref() {
         req = req.set("Authorization", &format!("Discogs token={t}"));
     }
@@ -108,8 +108,8 @@ fn get_json<T: for<'de> Deserialize<'de>>(url: &str) -> Result<T> {
     // token 失效（401）时退回匿名请求：搜索/详情接口本身允许无鉴权
     let resp = match first {
         Ok(r) => r,
-        Err(ureq::Error::Status(401, _)) if token.is_some() => ureq::get(url)
-            .set("User-Agent", UA)
+        Err(ureq::Error::Status(401, _)) if token.is_some() => super::agent()
+            .get(url)
             .call()
             .with_context(|| format!("Discogs 请求失败（匿名重试）：{url}"))?,
         Err(e) => return Err(e).with_context(|| format!("Discogs 请求失败：{url}")),
